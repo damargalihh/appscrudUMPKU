@@ -2,7 +2,92 @@
 
 @section('page-title', 'Dashboard')
 
-<div class="space-y-6">
+{{-- MASTER REALTIME CONTROLLER --}}
+<div class="space-y-6"
+     x-data="{
+        // Stat card data
+        stats: { total: 0, online: 0, enabled: 0, disabled: 0, time: '' },
+        // Profiles
+        profiles: [], profilesLoading: true,
+        // Active users
+        actives: [], activesLoading: true,
+        // Chart
+        labels: [], onlineData: [], totalData: [], chart: null, maxPoints: 20, chartLoading: true,
+
+        async fetchStats() {
+            try {
+                const res = await fetch('{{ route('api.userStats') }}');
+                if (!res.ok) throw new Error();
+                const data = await res.json();
+                this.stats = data;
+                this.labels.push(data.time);
+                this.onlineData.push(data.online);
+                this.totalData.push(data.total);
+                if (this.labels.length > this.maxPoints) {
+                    this.labels.shift(); this.onlineData.shift(); this.totalData.shift();
+                }
+                if (this.chart) {
+                    this.chart.data.labels = this.labels;
+                    this.chart.data.datasets[0].data = this.onlineData;
+                    this.chart.data.datasets[1].data = this.totalData;
+                    this.chart.update('none');
+                }
+            } catch (e) { console.error(e); }
+            finally { this.chartLoading = false; }
+        },
+        async fetchProfiles() {
+            try {
+                const res = await fetch('{{ route('api.profiles') }}');
+                if (!res.ok) throw new Error();
+                this.profiles = await res.json();
+            } catch (e) { console.error(e); }
+            finally { this.profilesLoading = false; }
+        },
+        async fetchActives() {
+            try {
+                const res = await fetch('{{ route('api.activeUsers') }}');
+                if (!res.ok) throw new Error();
+                this.actives = await res.json();
+            } catch (e) { console.error(e); }
+            finally { this.activesLoading = false; }
+        },
+        initChart() {
+            const ctx = this.$refs.userChart.getContext('2d');
+            const g1 = ctx.createLinearGradient(0, 0, 0, 250);
+            g1.addColorStop(0, 'rgba(34,197,94,0.25)'); g1.addColorStop(1, 'rgba(34,197,94,0)');
+            const g2 = ctx.createLinearGradient(0, 0, 0, 250);
+            g2.addColorStop(0, 'rgba(59,130,246,0.12)'); g2.addColorStop(1, 'rgba(59,130,246,0)');
+            this.chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: this.labels,
+                    datasets: [
+                        { label: 'User Online', data: this.onlineData, borderColor: '#22c55e', backgroundColor: g1, borderWidth: 2.5, fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#22c55e', pointBorderColor: '#fff', pointBorderWidth: 2, pointHoverRadius: 5 },
+                        { label: 'Total User', data: this.totalData, borderColor: '#3b82f6', backgroundColor: g2, borderWidth: 2, fill: true, tension: 0.4, pointRadius: 2, pointBackgroundColor: '#3b82f6', pointBorderColor: '#fff', pointBorderWidth: 1.5, borderDash: [5,3] },
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { intersect: false, mode: 'index' },
+                    plugins: {
+                        legend: { display: true, position: 'top', align: 'end', labels: { boxWidth: 12, boxHeight: 3, font: { size: 11 }, padding: 15 } },
+                        tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', titleFont: { size: 11 }, bodyFont: { size: 12 }, padding: 10, cornerRadius: 8, displayColors: true }
+                    },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#9ca3af', maxRotation: 0 } },
+                        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 }, color: '#9ca3af', stepSize: 1, precision: 0 } }
+                    },
+                    animation: { duration: 400 }
+                }
+            });
+        },
+        async init() {
+            await Promise.all([this.fetchStats(), this.fetchProfiles(), this.fetchActives()]);
+            this.initChart();
+            setInterval(() => { this.fetchStats(); this.fetchProfiles(); this.fetchActives(); }, 5000);
+        }
+     }"
+     x-init="init()">
 
     {{-- WELCOME BANNER --}}
     <div class="rounded-2xl bg-gradient-to-r from-[#1a1a2e] via-[#16213e] to-[#0f3460] p-6 flex items-center justify-between shadow-lg">
@@ -10,7 +95,7 @@
             <h1 class="text-xl font-bold text-white">Halo, {{ auth()->user()->name }} <span class="inline-block animate-bounce">👋</span></h1>
             <p class="text-white/50 text-sm mt-1">Kelola jaringan WiFi hotspot kampus dari sini.</p>
             <div class="mt-3 inline-flex items-center gap-2 bg-green-500/15 text-green-400 text-xs font-medium px-3 py-1.5 rounded-full border border-green-500/20">
-                <span class="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span> Sistem Normal
+                <span class="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span> Semua Data Realtime
             </div>
         </div>
         <div class="hidden md:flex w-24 h-24 rounded-2xl items-center justify-center overflow-hidden">
@@ -18,13 +103,13 @@
         </div>
     </div>
 
-    {{-- STAT CARDS --}}
+    {{-- STAT CARDS (REALTIME) --}}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold">Total User</p>
-                    <p class="text-2xl font-bold text-gray-800 mt-1">{{ count($users) }}</p>
+                    <p class="text-2xl font-bold text-gray-800 mt-1" x-text="stats.total">-</p>
                 </div>
                 <div class="w-11 h-11 bg-blue-50 rounded-xl flex items-center justify-center">
                     <i class="fas fa-users text-blue-500"></i>
@@ -34,8 +119,8 @@
         <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold">User Aktif</p>
-                    <p class="text-2xl font-bold text-green-600 mt-1">{{ count($activeUsers) }}</p>
+                    <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold">User Online</p>
+                    <p class="text-2xl font-bold text-green-600 mt-1" x-text="stats.online">-</p>
                 </div>
                 <div class="w-11 h-11 bg-green-50 rounded-xl flex items-center justify-center">
                     <i class="fas fa-signal text-green-500"></i>
@@ -46,7 +131,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold">Profile</p>
-                    <p class="text-2xl font-bold text-gray-800 mt-1">{{ count($profiles) }}</p>
+                    <p class="text-2xl font-bold text-gray-800 mt-1" x-text="profiles.length">-</p>
                 </div>
                 <div class="w-11 h-11 bg-amber-50 rounded-xl flex items-center justify-center">
                     <i class="fas fa-layer-group text-amber-500"></i>
@@ -57,7 +142,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold">Disabled</p>
-                    <p class="text-2xl font-bold text-red-500 mt-1">{{ collect($users)->where('disabled', 'true')->count() }}</p>
+                    <p class="text-2xl font-bold text-red-500 mt-1" x-text="stats.disabled">-</p>
                 </div>
                 <div class="w-11 h-11 bg-red-50 rounded-xl flex items-center justify-center">
                     <i class="fas fa-user-slash text-red-400"></i>
@@ -69,84 +154,98 @@
     {{-- THREE COLUMN: PROFILES + ACTIVE USERS + BANDWIDTH --}}
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {{-- PROFILE HOTSPOT --}}
+        {{-- PROFILE HOTSPOT (REALTIME) --}}
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                 <h3 class="text-sm font-semibold text-gray-800 flex items-center gap-2">
                     <i class="fas fa-layer-group text-amber-500"></i> Profile
+                    <span class="inline-flex items-center gap-1 text-[10px] text-green-500 font-normal">
+                        <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Live
+                    </span>
                 </h3>
-                <span class="text-xs text-gray-400">{{ count($profiles) }}</span>
+                <span class="text-xs text-gray-400" x-text="profiles.length"></span>
             </div>
             <div class="divide-y divide-gray-50 max-h-72 overflow-y-auto">
-                @forelse($profiles as $profile)
-                <div class="px-5 py-3 flex items-center justify-between hover:bg-gray-50/50 transition group">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center text-white text-xs font-bold">
-                            {{ strtoupper(substr($profile['name'], 0, 1)) }}
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-gray-800">{{ $profile['name'] }}</p>
-                            <p class="text-[11px] text-gray-400">Rate: {{ $profile['rate-limit'] ?? 'Unlimited' }}</p>
-                        </div>
+                <template x-if="profilesLoading">
+                    <div class="px-5 py-8 text-center text-gray-400 text-sm">
+                        <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                        <p>Memuat profile...</p>
                     </div>
-                    <form method="POST" action="{{ route('hotspot.destroyProfile', $profile['.id']) }}"
-                          onsubmit="return confirm('Yakin hapus profile {{ $profile['name'] }}?')">
-                        @csrf
-                        @method('DELETE')
-                        <button class="opacity-0 group-hover:opacity-100 text-xs text-red-400 hover:text-red-600 transition-all px-2 py-1 rounded hover:bg-red-50">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </form>
-                </div>
-                @empty
-                <div class="px-5 py-8 text-center text-gray-400 text-sm">
-                    <i class="fas fa-inbox text-2xl mb-2"></i>
-                    <p>Belum ada profile</p>
-                </div>
-                @endforelse
+                </template>
+                <template x-if="!profilesLoading && profiles.length === 0">
+                    <div class="px-5 py-8 text-center text-gray-400 text-sm">
+                        <i class="fas fa-inbox text-2xl mb-2"></i>
+                        <p>Belum ada profile</p>
+                    </div>
+                </template>
+                <template x-for="(p, i) in profiles" :key="i">
+                    <div class="px-5 py-3 flex items-center justify-between hover:bg-gray-50/50 transition group">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center text-white text-xs font-bold" x-text="p.name.charAt(0).toUpperCase()"></div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-800" x-text="p.name"></p>
+                                <p class="text-[11px] text-gray-400">Rate: <span x-text="p.rateLimit"></span></p>
+                            </div>
+                        </div>
+                        <form method="POST" :action="'/hotspot-profiles/' + p.id"
+                              onsubmit="return confirm('Yakin hapus profile ini?')">
+                            @csrf
+                            @method('DELETE')
+                            <button class="opacity-0 group-hover:opacity-100 text-xs text-red-400 hover:text-red-600 transition-all px-2 py-1 rounded hover:bg-red-50">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </form>
+                    </div>
+                </template>
             </div>
         </div>
 
-        {{-- USER AKTIF --}}
+        {{-- USER AKTIF (REALTIME) --}}
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                 <h3 class="text-sm font-semibold text-gray-800 flex items-center gap-2">
                     <i class="fas fa-signal text-green-500"></i> User Online
+                    <span class="inline-flex items-center gap-1 text-[10px] text-green-500 font-normal">
+                        <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Live
+                    </span>
                 </h3>
                 <span class="inline-flex items-center gap-1.5 text-xs text-green-600 bg-green-50 px-2.5 py-1 rounded-full">
-                    <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> {{ count($activeUsers) }}
+                    <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                    <span x-text="actives.length"></span>
                 </span>
             </div>
             <div class="divide-y divide-gray-50 max-h-72 overflow-y-auto">
-                @forelse($activeUsers as $a)
-                <div class="px-5 py-3 flex items-center justify-between hover:bg-gray-50/50 transition">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center text-white text-xs font-bold">
-                            {{ strtoupper(substr($a['user'], 0, 1)) }}
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-gray-800">{{ $a['user'] }}</p>
-                            <p class="text-[11px] text-gray-400">{{ $a['address'] }}</p>
-                        </div>
+                <template x-if="activesLoading">
+                    <div class="px-5 py-8 text-center text-gray-400 text-sm">
+                        <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                        <p>Memuat user online...</p>
                     </div>
-                    <span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded font-mono">{{ $a['uptime'] }}</span>
-                </div>
-                @empty
-                <div class="px-5 py-8 text-center text-gray-400 text-sm">
-                    <i class="fas fa-wifi text-2xl mb-2 opacity-30"></i>
-                    <p>Tidak ada user online</p>
-                </div>
-                @endforelse
+                </template>
+                <template x-if="!activesLoading && actives.length === 0">
+                    <div class="px-5 py-8 text-center text-gray-400 text-sm">
+                        <i class="fas fa-wifi text-2xl mb-2 opacity-30"></i>
+                        <p>Tidak ada user online</p>
+                    </div>
+                </template>
+                <template x-for="(a, i) in actives" :key="i">
+                    <div class="px-5 py-3 flex items-center justify-between hover:bg-gray-50/50 transition">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center text-white text-xs font-bold" x-text="a.user.charAt(0).toUpperCase()"></div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-800" x-text="a.user"></p>
+                                <p class="text-[11px] text-gray-400" x-text="a.address"></p>
+                            </div>
+                        </div>
+                        <span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded font-mono" x-text="a.uptime"></span>
+                    </div>
+                </template>
             </div>
         </div>
 
-        {{-- BANDWIDTH MONITORING (REAL-TIME) --}}
+        {{-- BANDWIDTH MONITORING (REALTIME) --}}
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
              x-data="{
-                queues: [],
-                loading: true,
-                error: false,
-                lastUpdate: null,
+                queues: [], bwLoading: true, bwError: false, lastUpdate: null,
                 formatBytes(bytes) {
                     if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + ' Mbps';
                     if (bytes >= 1024) return (bytes / 1024).toFixed(1) + ' Kbps';
@@ -155,22 +254,19 @@
                 async fetchBandwidth() {
                     try {
                         const res = await fetch('{{ route('api.bandwidth') }}');
-                        if (!res.ok) throw new Error('Network error');
+                        if (!res.ok) throw new Error();
                         this.queues = await res.json();
-                        this.error = false;
+                        this.bwError = false;
                         this.lastUpdate = new Date().toLocaleTimeString('id-ID');
-                    } catch (e) {
-                        this.error = true;
-                    } finally {
-                        this.loading = false;
-                    }
+                    } catch (e) { this.bwError = true; }
+                    finally { this.bwLoading = false; }
                 }
              }"
              x-init="fetchBandwidth(); setInterval(() => fetchBandwidth(), 5000)">
             <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                 <h3 class="text-sm font-semibold text-gray-800 flex items-center gap-2">
                     <i class="fas fa-tachometer-alt text-purple-500"></i> Bandwidth
-                    <span x-show="!loading" class="inline-flex items-center gap-1 text-[10px] text-green-500 font-normal">
+                    <span x-show="!bwLoading" class="inline-flex items-center gap-1 text-[10px] text-green-500 font-normal">
                         <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Live
                     </span>
                 </h3>
@@ -180,31 +276,24 @@
                 </div>
             </div>
             <div class="divide-y divide-gray-50 max-h-72 overflow-y-auto">
-                {{-- Loading --}}
-                <template x-if="loading">
+                <template x-if="bwLoading">
                     <div class="px-5 py-8 text-center text-gray-400 text-sm">
                         <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
                         <p>Memuat data bandwidth...</p>
                     </div>
                 </template>
-
-                {{-- Error --}}
-                <template x-if="!loading && error">
+                <template x-if="!bwLoading && bwError">
                     <div class="px-5 py-8 text-center text-red-400 text-sm">
                         <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
                         <p>Gagal memuat data bandwidth</p>
                     </div>
                 </template>
-
-                {{-- Empty --}}
-                <template x-if="!loading && !error && queues.length === 0">
+                <template x-if="!bwLoading && !bwError && queues.length === 0">
                     <div class="px-5 py-8 text-center text-gray-400 text-sm">
                         <i class="fas fa-tachometer-alt text-2xl mb-2 opacity-30"></i>
                         <p>Tidak ada queue aktif</p>
                     </div>
                 </template>
-
-                {{-- Queue Items --}}
                 <template x-for="(q, i) in queues" :key="i">
                     <div class="px-5 py-3 hover:bg-gray-50/50 transition">
                         <div class="flex items-center justify-between mb-2">
@@ -245,112 +334,137 @@
 
     </div>
 
-    {{-- USER HOTSPOT TABLE WITH SEARCH --}}
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" x-data="{ search: '', filter: 'all', profileFilter: 'all' }">
-        <div class="px-5 py-4 border-b border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <h3 class="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                <i class="fas fa-user-shield text-blue-500"></i> Semua User Hotspot
-                <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium ml-1">{{ count($users) }}</span>
-            </h3>
-            <div class="flex items-center gap-2 w-full sm:w-auto flex-wrap">
-                {{-- FILTER STATUS --}}
-                <select x-model="filter" class="text-xs border border-gray-200 rounded-lg px-2.5 py-2 focus:ring-1 focus:ring-orange-300 focus:border-orange-300 bg-white">
-                    <option value="all">Semua Status</option>
-                    <option value="active">Active</option>
-                    <option value="disabled">Disabled</option>
-                </select>
-                {{-- FILTER PROFILE --}}
-                <select x-model="profileFilter" class="text-xs border border-gray-200 rounded-lg px-2.5 py-2 focus:ring-1 focus:ring-orange-300 focus:border-orange-300 bg-white">
-                    <option value="all">Semua Profile</option>
-                    @foreach($profiles as $p)
-                        <option value="{{ strtolower($p['name']) }}">{{ $p['name'] }}</option>
-                    @endforeach
-                </select>
-                {{-- SEARCH --}}
-                <div class="relative flex-1 sm:flex-none">
-                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
-                    <input x-model="search" type="text" placeholder="Cari user..."
-                           class="w-full sm:w-48 pl-8 pr-3 py-2 text-xs border border-gray-200 rounded-lg focus:ring-1 focus:ring-orange-300 focus:border-orange-300 transition">
+    {{-- TWO COLUMN: SYSTEM INFO + REALTIME USER CHART --}}
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+        {{-- SYSTEM INFO (REALTIME) --}}
+        <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
+             x-data="{
+                info: null, sysLoading: true, sysError: false,
+                async fetchInfo() {
+                    try {
+                        const res = await fetch('{{ route('api.systemInfo') }}');
+                        if (!res.ok) throw new Error();
+                        this.info = await res.json();
+                        this.sysError = false;
+                    } catch (e) { this.sysError = true; }
+                    finally { this.sysLoading = false; }
+                }
+             }"
+             x-init="fetchInfo(); setInterval(() => fetchInfo(), 10000)">
+            <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                    <i class="fas fa-server text-indigo-500"></i> Sistem MikroTik
+                    <span x-show="!sysLoading && !sysError" class="inline-flex items-center gap-1 text-[10px] text-green-500 font-normal">
+                        <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Live
+                    </span>
+                </h3>
+            </div>
+            <div class="p-5">
+                <template x-if="sysLoading">
+                    <div class="py-8 text-center text-gray-400 text-sm">
+                        <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                        <p>Memuat info sistem...</p>
+                    </div>
+                </template>
+                <template x-if="!sysLoading && sysError">
+                    <div class="py-8 text-center text-red-400 text-sm">
+                        <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+                        <p>Gagal memuat info sistem</p>
+                    </div>
+                </template>
+                <template x-if="!sysLoading && !sysError && info">
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-3 pb-3 border-b border-gray-100">
+                            <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center text-white">
+                                <i class="fas fa-microchip"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-bold text-gray-800" x-text="info.identity"></p>
+                                <p class="text-[11px] text-gray-400"><span x-text="info.board"></span> &middot; RouterOS <span x-text="info.version"></span></p>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-gray-500 flex items-center gap-2"><i class="fas fa-clock text-gray-400 w-4"></i> Uptime</span>
+                            <span class="text-xs font-semibold text-gray-800 font-mono" x-text="info.uptime"></span>
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between mb-1.5">
+                                <span class="text-xs text-gray-500 flex items-center gap-2"><i class="fas fa-microchip text-blue-400 w-4"></i> CPU</span>
+                                <span class="text-xs font-semibold" :class="info.cpuLoad > 80 ? 'text-red-500' : info.cpuLoad > 50 ? 'text-amber-500' : 'text-green-600'" x-text="info.cpuLoad + '%'"></span>
+                            </div>
+                            <div class="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                                <div class="h-full rounded-full transition-all duration-700" :class="info.cpuLoad > 80 ? 'bg-red-500' : info.cpuLoad > 50 ? 'bg-amber-400' : 'bg-green-500'" :style="'width:' + info.cpuLoad + '%'"></div>
+                            </div>
+                            <p class="text-[10px] text-gray-400 mt-1" x-text="info.cpu + ' (' + info.cpuCount + ' core) · ' + info.architecture"></p>
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between mb-1.5">
+                                <span class="text-xs text-gray-500 flex items-center gap-2"><i class="fas fa-memory text-purple-400 w-4"></i> Memory</span>
+                                <span class="text-xs font-semibold" :class="info.memPercent > 80 ? 'text-red-500' : info.memPercent > 50 ? 'text-amber-500' : 'text-green-600'" x-text="info.memPercent + '%'"></span>
+                            </div>
+                            <div class="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                                <div class="h-full rounded-full transition-all duration-700" :class="info.memPercent > 80 ? 'bg-red-500' : info.memPercent > 50 ? 'bg-amber-400' : 'bg-purple-500'" :style="'width:' + info.memPercent + '%'"></div>
+                            </div>
+                            <p class="text-[10px] text-gray-400 mt-1" x-text="info.usedMemory + ' / ' + info.totalMemory"></p>
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between mb-1.5">
+                                <span class="text-xs text-gray-500 flex items-center gap-2"><i class="fas fa-hdd text-amber-400 w-4"></i> Storage</span>
+                                <span class="text-xs font-semibold" :class="info.hddPercent > 80 ? 'text-red-500' : info.hddPercent > 50 ? 'text-amber-500' : 'text-green-600'" x-text="info.hddPercent + '%'"></span>
+                            </div>
+                            <div class="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                                <div class="h-full rounded-full transition-all duration-700" :class="info.hddPercent > 80 ? 'bg-red-500' : info.hddPercent > 50 ? 'bg-amber-400' : 'bg-amber-500'" :style="'width:' + info.hddPercent + '%'"></div>
+                            </div>
+                            <p class="text-[10px] text-gray-400 mt-1" x-text="info.usedHdd + ' / ' + info.totalHdd"></p>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        {{-- REALTIME USER CHART --}}
+        <div class="lg:col-span-3 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                    <i class="fas fa-chart-area text-green-500"></i> Grafik Pengguna Realtime
+                    <span x-show="!chartLoading" class="inline-flex items-center gap-1 text-[10px] text-green-500 font-normal">
+                        <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Live
+                    </span>
+                </h3>
+                <div class="flex items-center gap-1.5 text-[11px]">
+                    <span class="inline-flex items-center gap-1 bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-medium">
+                        <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                        <span x-text="stats.online"></span> Online
+                    </span>
+                    <span class="inline-flex items-center gap-1 bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-medium">
+                        <i class="fas fa-users text-[9px]"></i>
+                        <span x-text="stats.total"></span> Total
+                    </span>
+                    <span class="inline-flex items-center gap-1 bg-red-50 text-red-500 px-2 py-0.5 rounded-full font-medium">
+                        <span class="w-1.5 h-1.5 bg-red-400 rounded-full"></span>
+                        <span x-text="stats.disabled"></span> Off
+                    </span>
+                </div>
+            </div>
+            <div class="p-5">
+                <template x-if="chartLoading">
+                    <div class="py-12 text-center text-gray-400 text-sm">
+                        <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                        <p>Memuat grafik...</p>
+                    </div>
+                </template>
+                <div x-show="!chartLoading" style="height: 280px;">
+                    <canvas x-ref="userChart"></canvas>
                 </div>
             </div>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead>
-                    <tr class="bg-gray-50 text-left">
-                        <th class="px-5 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">User</th>
-                        <th class="px-5 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Profile</th>
-                        <th class="px-5 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Status</th>
-                        <th class="px-5 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-50">
-                    @foreach($users as $u)
-                    <tr class="hover:bg-gray-50/70 transition"
-                        x-show="(search === '' || '{{ strtolower($u['name']) }}'.includes(search.toLowerCase()) || '{{ strtolower($u['profile'] ?? '') }}'.includes(search.toLowerCase()))
-                                && (filter === 'all' || (filter === 'active' && '{{ $u['disabled'] ?? 'false' }}' !== 'true') || (filter === 'disabled' && '{{ $u['disabled'] ?? 'false' }}' === 'true'))
-                                && (profileFilter === 'all' || '{{ strtolower($u['profile'] ?? '') }}' === profileFilter)"
-                        x-transition>
-                        <td class="px-5 py-3">
-                            <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center text-white text-xs font-bold">
-                                    {{ strtoupper(substr($u['name'], 0, 1)) }}
-                                </div>
-                                <span class="text-sm font-medium text-gray-800">{{ $u['name'] }}</span>
-                            </div>
-                        </td>
-                        <td class="px-5 py-3">
-                            <span class="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded font-medium">{{ $u['profile'] ?? '-' }}</span>
-                        </td>
-                        <td class="px-5 py-3">
-                            @if(($u['disabled'] ?? 'false') === 'true')
-                                <span class="inline-flex items-center gap-1 text-xs text-red-500 bg-red-50 px-2 py-0.5 rounded font-medium">
-                                    <span class="w-1.5 h-1.5 bg-red-400 rounded-full"></span> Disabled
-                                </span>
-                            @else
-                                <span class="inline-flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded font-medium">
-                                    <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Active
-                                </span>
-                            @endif
-                        </td>
-                        <td class="px-5 py-3">
-                            <div class="flex items-center gap-1.5 flex-wrap">
-                                <form method="POST" action="/hotspot-users/{{ $u['.id'] }}/{{ ($u['disabled'] ?? 'false') === 'true' ? 'enable' : 'disable' }}">
-                                    @csrf
-                                    <button class="text-[11px] font-medium px-2.5 py-1 rounded-md transition
-                                        {{ ($u['disabled'] ?? 'false') === 'true'
-                                            ? 'text-green-600 bg-green-50 hover:bg-green-100'
-                                            : 'text-amber-600 bg-amber-50 hover:bg-amber-100' }}">
-                                        <i class="fas {{ ($u['disabled'] ?? 'false') === 'true' ? 'fa-toggle-on' : 'fa-toggle-off' }} mr-0.5"></i>
-                                        {{ ($u['disabled'] ?? 'false') === 'true' ? 'Enable' : 'Disable' }}
-                                    </button>
-                                </form>
-                                <form method="POST" action="/hotspot-users/{{ $u['.id'] }}/reset-password" class="flex items-center gap-1">
-                                    @csrf
-                                    <input type="password" name="password" placeholder="New pass"
-                                           class="w-20 px-2 py-1 text-[11px] border border-gray-200 rounded-md focus:ring-1 focus:ring-amber-300 focus:border-amber-300 transition" required>
-                                    <button class="text-[11px] font-medium px-2.5 py-1 rounded-md text-blue-600 bg-blue-50 hover:bg-blue-100 transition">
-                                        <i class="fas fa-key mr-0.5"></i> Reset
-                                    </button>
-                                </form>
-                                <form method="POST" action="{{ route('hotspot.destroy', $u['.id']) }}"
-                                      onsubmit="return confirm('Yakin hapus user {{ $u['name'] }}?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button class="text-[11px] font-medium px-2.5 py-1 rounded-md text-red-500 bg-red-50 hover:bg-red-100 transition">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
     </div>
 
 </div>
+
+{{-- Chart.js CDN --}}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 
 </x-app-layout>

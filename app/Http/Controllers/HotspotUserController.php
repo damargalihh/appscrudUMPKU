@@ -7,17 +7,9 @@ use App\Services\MikrotikService;
 
 class HotspotUserController extends Controller
 {
-    public function dashboard(\App\Services\MikrotikService $mt)
+    public function dashboard()
     {
-        try {
-            $users       = $mt->getHotspotUsers();
-            $activeUsers = $mt->getActiveUsers();
-            $profiles    = $mt->getProfiles();
-        } catch (\Exception $e) {
-            $users = $activeUsers = $profiles = [];
-        }
-
-        return view('dashboard', compact('users', 'activeUsers', 'profiles'));
+        return view('dashboard');
     }
     
     /**
@@ -92,17 +84,26 @@ class HotspotUserController extends Controller
     }
 
     /**
-     * Disable user hotspot
+     * Disable user hotspot + kick dari jaringan
      */
     public function disable(string $id, MikrotikService $mt)
     {
         try {
+            // Ambil username dulu sebelum disable
+            $username = $mt->getUsernameById($id);
+
+            // Disable user
             $mt->disableUser($id);
+
+            // Kick dari active session agar langsung terputus
+            if ($username) {
+                $mt->kickActiveUser($username);
+            }
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal disable user: ' . $e->getMessage());
         }
 
-        return back()->with('success', 'User berhasil di-disable');
+        return back()->with('success', 'User berhasil di-disable & terputus dari jaringan');
     }
 
     /**
@@ -145,6 +146,119 @@ class HotspotUserController extends Controller
         }
 
         return back()->with('success', 'Profile berhasil dihapus');
+    }
+
+    /**
+     * API: Profiles (JSON)
+     */
+    public function apiProfiles(MikrotikService $mt)
+    {
+        try {
+            $profiles = $mt->getProfiles();
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+
+        return response()->json(collect($profiles)->map(fn($p) => [
+            'id'        => $p['.id'] ?? '',
+            'name'      => $p['name'] ?? '-',
+            'rateLimit' => $p['rate-limit'] ?? 'Unlimited',
+        ]));
+    }
+
+    /**
+     * API: Active users (JSON)
+     */
+    public function apiActiveUsers(MikrotikService $mt)
+    {
+        try {
+            $actives = $mt->getActiveUsers();
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+
+        return response()->json(collect($actives)->map(fn($a) => [
+            'user'    => $a['user'] ?? '-',
+            'address' => $a['address'] ?? '-',
+            'uptime'  => $a['uptime'] ?? '-',
+        ]));
+    }
+
+    /**
+     * API: System info realtime (JSON)
+     */
+    public function apiSystemInfo(MikrotikService $mt)
+    {
+        try {
+            $resource = $mt->getSystemResource();
+            $identity = $mt->getIdentity();
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+
+        // Parse memory
+        $totalMem = intval($resource['total-memory'] ?? 0);
+        $freeMem = intval($resource['free-memory'] ?? 0);
+        $usedMem = $totalMem - $freeMem;
+        $memPercent = $totalMem > 0 ? round(($usedMem / $totalMem) * 100) : 0;
+
+        // Parse HDD
+        $totalHdd = intval($resource['total-hdd-space'] ?? 0);
+        $freeHdd = intval($resource['free-hdd-space'] ?? 0);
+        $usedHdd = $totalHdd - $freeHdd;
+        $hddPercent = $totalHdd > 0 ? round(($usedHdd / $totalHdd) * 100) : 0;
+
+        $formatBytes = function ($bytes) {
+            if ($bytes >= 1073741824) return round($bytes / 1073741824, 1) . ' GB';
+            if ($bytes >= 1048576) return round($bytes / 1048576, 1) . ' MB';
+            if ($bytes >= 1024) return round($bytes / 1024, 1) . ' KB';
+            return $bytes . ' B';
+        };
+
+        return response()->json([
+            'identity'       => $identity,
+            'board'          => $resource['board-name'] ?? '-',
+            'version'        => $resource['version'] ?? '-',
+            'uptime'         => $resource['uptime'] ?? '-',
+            'cpu'            => $resource['cpu'] ?? '-',
+            'cpuLoad'        => intval($resource['cpu-load'] ?? 0),
+            'cpuCount'       => $resource['cpu-count'] ?? '1',
+            'architecture'   => $resource['architecture-name'] ?? '-',
+            'totalMemory'    => $formatBytes($totalMem),
+            'usedMemory'     => $formatBytes($usedMem),
+            'freeMemory'     => $formatBytes($freeMem),
+            'memPercent'     => $memPercent,
+            'totalHdd'       => $formatBytes($totalHdd),
+            'usedHdd'        => $formatBytes($usedHdd),
+            'freeHdd'        => $formatBytes($freeHdd),
+            'hddPercent'     => $hddPercent,
+        ]);
+    }
+
+    /**
+     * API: User stats realtime (JSON) for chart
+     */
+    public function apiUserStats(MikrotikService $mt)
+    {
+        try {
+            $users = $mt->getHotspotUsers();
+            $activeUsers = $mt->getActiveUsers();
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+
+        $total = count($users);
+        $active = count($activeUsers);
+        $disabled = collect($users)->where('disabled', 'true')->count();
+        $enabled = $total - $disabled;
+
+        return response()->json([
+            'total'    => $total,
+            'online'   => $active,
+            'enabled'  => $enabled,
+            'disabled' => $disabled,
+            'time'     => now()->format('H:i:s'),
+        ]);
     }
 
     /**

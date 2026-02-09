@@ -99,6 +99,43 @@ class MikrotikService
     }
 
     /**
+     * KICK USER DARI ACTIVE SESSION (disconnect langsung)
+     */
+    public function kickActiveUser(string $username)
+    {
+        // Cari semua active session milik username ini
+        $actives = $this->client->query(
+            (new Query('/ip/hotspot/active/print'))
+                ->where('user', $username)
+        )->read();
+
+        // Remove setiap active session
+        foreach ($actives as $session) {
+            if (isset($session['.id'])) {
+                $this->client->query(
+                    (new Query('/ip/hotspot/active/remove'))
+                        ->equal('.id', $session['.id'])
+                )->read();
+            }
+        }
+
+        return count($actives);
+    }
+
+    /**
+     * GET USERNAME BY HOTSPOT USER ID
+     */
+    public function getUsernameById(string $id)
+    {
+        $result = $this->client->query(
+            (new Query('/ip/hotspot/user/print'))
+                ->where('.id', $id)
+        )->read();
+
+        return $result[0]['name'] ?? null;
+    }
+
+    /**
      * ENABLE USER
      */
     public function enableUser(string $id)
@@ -149,5 +186,29 @@ class MikrotikService
         return $this->client->query(
             new Query('/interface/print')
         )->read();
+    }
+
+    /**
+     * AMBIL SYSTEM RESOURCE (CPU, Memory, Uptime, dll)
+     */
+    public function getSystemResource()
+    {
+        $result = $this->client->query(
+            new Query('/system/resource/print')
+        )->read();
+
+        return $result[0] ?? [];
+    }
+
+    /**
+     * AMBIL SYSTEM IDENTITY
+     */
+    public function getIdentity()
+    {
+        $result = $this->client->query(
+            new Query('/system/identity/print')
+        )->read();
+
+        return $result[0]['name'] ?? 'MikroTik';
     }
 }
