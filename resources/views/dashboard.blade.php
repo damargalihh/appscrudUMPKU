@@ -59,6 +59,16 @@
                             <button class="text-sm text-red-600">Reset</button>
                         </form>
 
+                        {{-- DELETE USER --}}
+                        <form method="POST"
+                              action="{{ route('hotspot.destroy', $u['.id']) }}"
+                              class="inline"
+                              onsubmit="return confirm('Yakin hapus user hotspot ini?')">
+                            @csrf
+                            @method('DELETE')
+                            <button class="text-sm text-red-700">Delete</button>
+                        </form>
+
                     </td>
                 </tr>
                 @endforeach
