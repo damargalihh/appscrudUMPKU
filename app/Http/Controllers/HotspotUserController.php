@@ -132,4 +132,55 @@ class HotspotUserController extends Controller
 
         return view('hotspot.active', compact('users'));
     }
+
+    /**
+     * Hapus profile hotspot
+     */
+    public function destroyProfile(string $id, MikrotikService $mt)
+    {
+        try {
+            $mt->deleteProfile($id);
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal menghapus profile: ' . $e->getMessage());
+        }
+
+        return back()->with('success', 'Profile berhasil dihapus');
+    }
+
+    /**
+     * API: Bandwidth data realtime (JSON)
+     */
+    public function apiBandwidth(MikrotikService $mt)
+    {
+        try {
+            $queues = $mt->getQueues();
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+
+        $data = collect($queues)->map(function ($q) {
+            $rate = $q['rate'] ?? '0/0';
+            $rates = explode('/', $rate);
+            $upload = intval($rates[0] ?? 0);
+            $download = intval($rates[1] ?? 0);
+
+            $maxLimit = $q['max-limit'] ?? '0/0';
+            $maxParts = explode('/', $maxLimit);
+            $maxUp = intval($maxParts[0] ?? 0);
+            $maxDown = intval($maxParts[1] ?? 0);
+
+            return [
+                'name'        => $q['name'] ?? ($q['target'] ?? '-'),
+                'target'      => $q['target'] ?? '-',
+                'upload'      => $upload,
+                'download'    => $download,
+                'maxUp'       => $maxUp,
+                'maxDown'     => $maxDown,
+                'upPercent'   => $maxUp > 0 ? min(round(($upload / $maxUp) * 100), 100) : 0,
+                'downPercent' => $maxDown > 0 ? min(round(($download / $maxDown) * 100), 100) : 0,
+            ];
+        });
+
+        return response()->json($data);
+    }
 }

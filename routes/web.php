@@ -28,6 +28,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/hotspot-users/{id}/disable', [HotspotUserController::class, 'disable']);
     Route::post('/hotspot-users/{id}/enable', [HotspotUserController::class, 'enable']);
     Route::get('/hotspot-active', [HotspotUserController::class, 'active']);
+    Route::delete('/hotspot-profiles/{id}', [HotspotUserController::class, 'destroyProfile'])->name('hotspot.destroyProfile');
+    Route::get('/api/bandwidth', [HotspotUserController::class, 'apiBandwidth'])->name('api.bandwidth');
 });
 
 Route::get('/register-hotspot', [SelfRegisterController::class, 'showRegister']);

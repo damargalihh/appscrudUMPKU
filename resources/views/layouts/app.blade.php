@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="font-sans antialiased" x-data="{ sidebarOpen: true }">
+<body class="font-sans antialiased" x-data="{ sidebarOpen: true, navbarVisible: true }" @scroll.window="navbarVisible = (window.scrollY < 50)">
 
     {{-- BACKGROUND --}}
     <div class="fixed inset-0 z-0">
@@ -63,10 +63,11 @@
         </aside>
 
         {{-- MAIN CONTENT --}}
-        <div :class="sidebarOpen ? 'ml-64' : 'ml-20'" class="flex-1 transition-all duration-300">
+        <div :class="sidebarOpen ? 'ml-64' : 'ml-20'" class="flex-1 transition-all duration-300 flex flex-col min-h-screen">
 
-            {{-- TOP NAVBAR (glass style matching hotspot) --}}
-            <header class="sticky top-0 z-20 bg-white/95 border-b border-black/10 shadow-[0_2px_15px_rgba(0,0,0,0.08)]">
+            {{-- TOP NAVBAR (only on dashboard, hides on scroll) --}}
+            @if(request()->routeIs('dashboard'))
+            <header x-show="navbarVisible" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 -translate-y-full" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-full" class="sticky top-0 z-20 bg-white/95 border-b border-black/10 shadow-[0_2px_15px_rgba(0,0,0,0.08)]">
                 <div class="flex items-center justify-between px-6 py-3">
                     <div>
                         <h2 class="text-lg font-semibold text-[#1a1a2e]">@yield('page-title', 'Dashboard')</h2>
@@ -105,6 +106,7 @@
                     </div>
                 </div>
             </header>
+            @endif
 
             {{-- FLASH MESSAGES --}}
             @if(session('success'))
@@ -119,13 +121,13 @@
             @endif
 
             {{-- PAGE CONTENT --}}
-            <main class="p-6">
+            <main class="p-6 flex-1">
                 {{ $slot }}
             </main>
 
-            {{-- FOOTER --}}
-            <footer class="bg-gradient-to-r from-[#FF8C00] to-[#E65100] px-6 py-4 text-center">
-                <p class="text-white/90 text-xs">&copy; {{ date('Y') }} WiFi Manager — UMPKU Surakarta. All rights reserved.</p>
+            {{-- FOOTER (fixed bottom) --}}
+            <footer class="bg-white/80 border-t border-gray-100 px-6 py-3 text-center mt-auto">
+                <p class="text-gray-400 text-xs">&copy; {{ date('Y') }} WiFi Manager — UMPKU Surakarta</p>
             </footer>
         </div>
 

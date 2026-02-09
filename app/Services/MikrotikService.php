@@ -111,12 +111,43 @@ class MikrotikService
     }
 
     /**
+     * HAPUS PROFILE HOTSPOT
+     */
+    public function deleteProfile(string $id)
+    {
+        return $this->client->query(
+            (new Query('/ip/hotspot/user/profile/remove'))
+                ->equal('.id', $id)
+        )->read();
+    }
+
+    /**
      * USER HOTSPOT AKTIF
      */
     public function getActiveUsers()
     {
         return $this->client->query(
             new Query('/ip/hotspot/active/print')
+        )->read();
+    }
+
+    /**
+     * AMBIL QUEUE / BANDWIDTH USAGE
+     */
+    public function getQueues()
+    {
+        return $this->client->query(
+            new Query('/queue/simple/print')
+        )->read();
+    }
+
+    /**
+     * AMBIL INTERFACE TRAFFIC
+     */
+    public function getInterfaceTraffic()
+    {
+        return $this->client->query(
+            new Query('/interface/print')
         )->read();
     }
 }
