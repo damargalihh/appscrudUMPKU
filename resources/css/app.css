@@ -1,3 +1,143 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ============================================
+   UMPKU Surakarta - Dashboard Theme
+   Matching WiFi Hotspot Login Page
+   ============================================ */
+
+:root {
+    --primary: #E53935;
+    --secondary: #FB8C00;
+    --accent: #FBC02D;
+    --overlay-dark: rgba(255, 255, 255, 0.55);
+    --overlay-medium: rgba(255, 255, 255, 0.45);
+    --glass: rgba(255, 255, 255, 0.25);
+    --glass-border: rgba(255, 255, 255, 0.4);
+    --text-dark: #1a1a2e;
+    --text-light: #4a4a6a;
+    --white: #ffffff;
+    --success: #4caf50;
+    --error: #f44336;
+}
+
+@layer base {
+    html {
+        scroll-behavior: smooth;
+    }
+    body {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+}
+
+@layer components {
+    /* Scrollbar styling */
+    ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #d1d5db;
+        border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: #9ca3af;
+    }
+
+    /* Glass card effect */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.92);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    }
+
+    /* Info box matching hotspot style */
+    .info-box {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    }
+
+    /* Accent underline hover effect */
+    .accent-underline {
+        position: relative;
+    }
+    .accent-underline::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--accent);
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+    }
+    .accent-underline:hover::after {
+        transform: scaleX(1);
+    }
+
+    /* Button matching hotspot style */
+    .btn-accent {
+        background: var(--accent);
+        color: var(--text-dark);
+        font-weight: 600;
+        padding: 10px 24px;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    .btn-accent:hover {
+        background: #ffca28;
+        box-shadow: 0 4px 15px rgba(251, 192, 45, 0.4);
+    }
+
+    .btn-primary {
+        background: var(--primary);
+        color: var(--white);
+        font-weight: 600;
+        padding: 10px 24px;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    .btn-primary:hover {
+        background: #c62828;
+        box-shadow: 0 4px 15px rgba(229, 57, 53, 0.4);
+    }
+
+    /* Connection badge */
+    .connection-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(76, 175, 80, 0.15);
+        padding: 6px 14px;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        color: #388e3c;
+        font-weight: 500;
+        border: 1px solid rgba(76, 175, 80, 0.3);
+    }
+
+    /* Progress bar animation */
+    .progress-bar {
+        height: 100%;
+        width: 0%;
+        background: var(--accent);
+        border-radius: 10px;
+        animation: progress 2s ease-in-out forwards;
+    }
+
+    @keyframes progress {
+        0% { width: 0%; }
+        100% { width: 100%; }
+    }
+}

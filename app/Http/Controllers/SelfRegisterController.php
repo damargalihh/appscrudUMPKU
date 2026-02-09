@@ -7,15 +7,9 @@ use App\Services\MikrotikService;
 
 class SelfRegisterController extends Controller
 {
-    public function showRegister(\App\Services\MikrotikService $mt)
+    public function showRegister()
     {
-        try {
-            $profiles = $mt->getProfiles();
-        } catch (\Exception $e) {
-            $profiles = [];
-        }
-    
-        return view('hotspot.register', compact('profiles'));
+        return view('hotspot.register');
     }
     
     public function selfRegister(Request $request, MikrotikService $mt)
@@ -23,7 +17,6 @@ class SelfRegisterController extends Controller
         $request->validate([
             'name' => 'required',
             'password' => 'required|min:4',
-            'profile' => 'required'
         ]);
     
         try {
