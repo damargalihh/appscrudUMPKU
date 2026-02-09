@@ -48,6 +48,7 @@
             </div>
         </div>
 
+<<<<<<< HEAD
         {{-- Profile Paket --}}
         <div class="glass-card rounded-xl p-5 flex items-center gap-4 hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
             <div class="w-14 h-14 bg-accent rounded-xl flex items-center justify-center shadow-md shadow-accent/20">
@@ -58,6 +59,39 @@
                 <p class="text-3xl font-bold text-[#1a1a2e]">{{ count($profiles) }}</p>
             </div>
         </div>
+=======
+                        {{-- ENABLE / DISABLE --}}
+                        <form method="POST" action="/hotspot-users/{{ $u['.id'] }}/{{ ($u['disabled'] ?? 'false') === 'true' ? 'enable' : 'disable' }}" class="inline">
+                            @csrf
+                            <button class="text-sm text-blue-600">
+                                {{ ($u['disabled'] ?? 'false') === 'true' ? 'Enable' : 'Disable' }}
+                            </button>
+                        </form>
+
+                        {{-- RESET PASSWORD --}}
+                        <form method="POST" action="/hotspot-users/{{ $u['.id'] }}/reset-password" class="inline">
+                            @csrf
+                            <input type="password" name="password" placeholder="New Pass"
+                                   class="border px-1 text-sm" required>
+                            <button class="text-sm text-red-600">Reset</button>
+                        </form>
+
+                        {{-- DELETE USER --}}
+                        <form method="POST"
+                              action="{{ route('hotspot.destroy', $u['.id']) }}"
+                              class="inline"
+                              onsubmit="return confirm('Yakin hapus user hotspot ini?')">
+                            @csrf
+                            @method('DELETE')
+                            <button class="text-sm text-red-700">Delete</button>
+                        </form>
+
+                    </td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+>>>>>>> 2857adeaca85e4793c8997314e7f6b5fd42eb5a9
     </div>
 
     {{-- USER HOTSPOT TABLE --}}
