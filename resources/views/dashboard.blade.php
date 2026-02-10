@@ -24,7 +24,7 @@
                 this.stats = data;
                 // Use current time for label (client clock, more real-time)
                 const now = new Date();
-                const label = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const label = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
                 this.labels.push(label);
                 this.onlineData.push(data.online);
                 this.totalData.push(data.total);
@@ -62,10 +62,10 @@
             // Ambil data awal agar chart tidak kosong
             await this.fetchStats();
             await Promise.all([this.fetchProfiles(), this.fetchActives()]);
-            // Update chart setiap detik
+            // Update chart setiap menit
             setInterval(() => {
                 this.fetchStats();
-            }, 1000);
+            }, 60000);
             // Update data lain tiap 5 detik
             setInterval(() => {
                 this.fetchProfiles();
