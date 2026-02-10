@@ -1,8 +1,8 @@
 <x-guest-layout :title="'Admin UMPKU Surakarta'">
-    <div class="glass-card rounded-2xl p-8">
+    <div class="glass-card rounded-2xl p-5 sm:p-8">
         {{-- Logo --}}
-        <div class="text-center mb-8">
-            <img src="{{ asset('img/logotulisan.png') }}" alt="UMPKU" class="h-20 w-auto mx-auto">
+        <div class="text-center mb-5 sm:mb-8">
+            <img src="{{ asset('img/logotulisan.png') }}" alt="UMPKU" class="h-14 sm:h-20 w-auto mx-auto">
         </div>
 
         <!-- Session Status -->
@@ -12,8 +12,8 @@
             @csrf
 
             <!-- Email Address -->
-            <div class="mb-5">
-                <label for="email" class="block text-sm font-medium text-[#1a1a2e] mb-2">Email</label>
+            <div class="mb-4">
+                <label for="email" class="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
                 <div class="relative">
                     <i class="fas fa-envelope absolute left-4 top-1/2 -translate-y-1/2 text-[#4a4a6a]"></i>
                     <input id="email" type="email" name="email" value="{{ old('email') }}" required autofocus autocomplete="username"
@@ -24,8 +24,8 @@
             </div>
 
             <!-- Password -->
-            <div class="mb-5">
-                <label for="password" class="block text-sm font-medium text-[#1a1a2e] mb-2">Password</label>
+            <div class="mb-4">
+                <label for="password" class="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
                 <div class="relative">
                     <i class="fas fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-[#4a4a6a]"></i>
                     <input id="password" type="password" name="password" required autocomplete="current-password"

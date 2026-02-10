@@ -9,6 +9,7 @@ Alpine.data('hotspotUsersTable', (initialUsers = []) => ({
 	search: '',
 	filter: 'all',
 	profileFilter: 'all',
+	selected: [],
 	refreshTimer: null,
 	start() {
 		this.refreshUsers();
@@ -19,10 +20,36 @@ Alpine.data('hotspotUsersTable', (initialUsers = []) => ({
 			const response = await window.axios.get('/api/hotspot-users');
 			if (Array.isArray(response.data)) {
 				this.users = response.data;
+				// Remove selected ids that no longer exist
+				const existingIds = new Set(response.data.map(u => u.id));
+				this.selected = this.selected.filter(id => existingIds.has(id));
 			}
 		} catch (error) {
 			// Silent fail to avoid breaking UI when API is temporarily unavailable.
 		}
+	},
+	toggleSelect(id) {
+		const idx = this.selected.indexOf(id);
+		if (idx === -1) {
+			this.selected.push(id);
+		} else {
+			this.selected.splice(idx, 1);
+		}
+	},
+	toggleSelectAll() {
+		const visible = this.filteredUsers();
+		const allIds = visible.map(u => u.id);
+		if (this.allSelected()) {
+			this.selected = this.selected.filter(id => !allIds.includes(id));
+		} else {
+			const set = new Set([...this.selected, ...allIds]);
+			this.selected = [...set];
+		}
+	},
+	allSelected() {
+		const visible = this.filteredUsers();
+		if (visible.length === 0) return false;
+		return visible.every(u => this.selected.includes(u.id));
 	},
 	filteredUsers() {
 		const searchText = this.search.toLowerCase().trim();

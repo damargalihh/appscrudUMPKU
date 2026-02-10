@@ -164,6 +164,36 @@ class HotspotUserController extends Controller
     }
 
     /**
+     * Hapus banyak user hotspot sekaligus
+     */
+    public function bulkDestroy(Request $request, MikrotikService $mt)
+    {
+        $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'required|string',
+        ]);
+
+        $success = 0;
+        $failed = 0;
+
+        foreach ($request->ids as $id) {
+            try {
+                $mt->deleteHotspotUser($id);
+                $success++;
+            } catch (\Exception $e) {
+                $failed++;
+            }
+        }
+
+        $msg = "{$success} user berhasil dihapus";
+        if ($failed > 0) {
+            $msg .= ", {$failed} gagal dihapus";
+        }
+
+        return back()->with('success', $msg);
+    }
+
+    /**
      * Reset password user hotspot
      */
     public function resetPassword(Request $request, string $id, MikrotikService $mt)
