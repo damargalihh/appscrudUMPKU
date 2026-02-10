@@ -2,7 +2,7 @@
 
 @section('page-title', 'Kelola User')
 
-<div class="space-y-6">
+<div class="space-y-6" x-data='hotspotUsersTable(@json($users))' x-init="start()">
 
     {{-- HEADER --}}
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -10,9 +10,7 @@
             <h1 class="text-base md:text-lg font-bold text-gray-800">Manajemen User Hotspot</h1>
             <p class="text-xs text-gray-400 mt-0.5">Tambah, edit, dan kelola user MikroTik hotspot</p>
         </div>
-        <span class="text-xs bg-gray-100 text-gray-500 px-3 py-1 rounded-full font-medium">
-            {{ count($users) }} user terdaftar
-        </span>
+        <span class="text-xs bg-gray-100 text-gray-500 px-3 py-1 rounded-full font-medium" x-text="users.length + ' user terdaftar'"></span>
     </div>
 
     {{-- FORM TAMBAH USER --}}
@@ -50,12 +48,12 @@
     </div>
 
     {{-- TABEL USER --}}
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" x-data="{ search: '', filter: 'all', profileFilter: 'all' }">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         {{-- SEARCH & FILTER BAR --}}
         <div class="px-4 md:px-5 py-4 border-b border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
                 <i class="fas fa-list text-blue-500"></i> Daftar User
-                <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">{{ count($users) }}</span>
+                <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium" x-text="users.length"></span>
             </h3>
             <div class="flex items-center gap-2 w-full sm:w-auto flex-wrap">
                 <select x-model="filter" class="text-xs border border-gray-200 rounded-lg px-2.5 py-2 focus:ring-1 focus:ring-orange-300 focus:border-orange-300 bg-white">
@@ -89,79 +87,71 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50">
-                    @foreach($users as $i => $user)
-                    <tr class="hover:bg-gray-50/70 transition"
-                        x-show="(search === '' || '{{ strtolower($user['name']) }}'.includes(search.toLowerCase()) || '{{ strtolower($user['profile'] ?? '') }}'.includes(search.toLowerCase()))
-                                && (filter === 'all' || (filter === 'active' && '{{ $user['disabled'] ?? 'false' }}' !== 'true') || (filter === 'disabled' && '{{ $user['disabled'] ?? 'false' }}' === 'true'))
-                                && (profileFilter === 'all' || '{{ strtolower($user['profile'] ?? '') }}' === profileFilter)"
-                        x-transition>
-                        <td class="px-4 md:px-5 py-3 text-xs text-gray-400">{{ $i + 1 }}</td>
-                        <td class="px-4 md:px-5 py-3">
-                            <div class="flex items-center gap-2.5">
-                                <div class="w-7 h-7 bg-gradient-to-br from-blue-400 to-blue-600 rounded-md flex items-center justify-center text-white text-[10px] font-bold">
-                                    {{ strtoupper(substr($user['name'], 0, 1)) }}
+                    <template x-for="(user, i) in filteredUsers()" :key="user.id || user.name || i">
+                        <tr class="hover:bg-gray-50/70 transition">
+                            <td class="px-4 md:px-5 py-3 text-xs text-gray-400" x-text="i + 1"></td>
+                            <td class="px-4 md:px-5 py-3">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-7 h-7 bg-gradient-to-br from-blue-400 to-blue-600 rounded-md flex items-center justify-center text-white text-[10px] font-bold"
+                                         x-text="(user.name || '-').charAt(0).toUpperCase()"></div>
+                                    <span class="text-sm font-medium text-gray-800" x-text="user.name"></span>
                                 </div>
-                                <span class="text-sm font-medium text-gray-800">{{ $user['name'] }}</span>
-                            </div>
-                        </td>
-                        <td class="px-4 md:px-5 py-3">
-                            <span class="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded font-medium">{{ $user['profile'] ?? '-' }}</span>
-                        </td>
-                        <td class="px-4 md:px-5 py-3">
-                            @if(($user['disabled'] ?? 'false') === 'true')
-                                <span class="inline-flex items-center gap-1 text-xs text-red-500 bg-red-50 px-2 py-0.5 rounded font-medium">
-                                    <span class="w-1.5 h-1.5 bg-red-400 rounded-full"></span> Disabled
-                                </span>
-                            @else
-                                <span class="inline-flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded font-medium">
-                                    <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Active
-                                </span>
-                            @endif
-                        </td>
-                        <td class="px-4 md:px-5 py-3">
-                            <div class="flex items-center gap-1.5 flex-wrap">
-                                {{-- TOGGLE --}}
-                                <form method="POST" action="/hotspot-users/{{ $user['.id'] }}/{{ ($user['disabled'] ?? 'false') === 'true' ? 'enable' : 'disable' }}">
-                                    @csrf
-                                    <button class="text-[11px] font-medium px-2 py-1 rounded-md transition
-                                        {{ ($user['disabled'] ?? 'false') === 'true'
-                                            ? 'text-green-600 bg-green-50 hover:bg-green-100'
-                                            : 'text-amber-600 bg-amber-50 hover:bg-amber-100' }}">
-                                        {{ ($user['disabled'] ?? 'false') === 'true' ? 'Enable' : 'Disable' }}
-                                    </button>
-                                </form>
+                            </td>
+                            <td class="px-4 md:px-5 py-3">
+                                <span class="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded font-medium" x-text="user.profile || '-'" ></span>
+                            </td>
+                            <td class="px-4 md:px-5 py-3">
+                                <template x-if="user.disabled">
+                                    <span class="inline-flex items-center gap-1 text-xs text-red-500 bg-red-50 px-2 py-0.5 rounded font-medium">
+                                        <span class="w-1.5 h-1.5 bg-red-400 rounded-full"></span> Disabled
+                                    </span>
+                                </template>
+                                <template x-if="!user.disabled">
+                                    <span class="inline-flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded font-medium">
+                                        <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Active
+                                    </span>
+                                </template>
+                            </td>
+                            <td class="px-4 md:px-5 py-3">
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    {{-- TOGGLE --}}
+                                    <form method="POST" :action="`/hotspot-users/${user.id}/${user.disabled ? 'enable' : 'disable'}`">
+                                        <input type="hidden" name="_token" value="{{ csrf_token() }}">
+                                        <button class="text-[11px] font-medium px-2 py-1 rounded-md transition"
+                                            :class="user.disabled
+                                                ? 'text-green-600 bg-green-50 hover:bg-green-100'
+                                                : 'text-amber-600 bg-amber-50 hover:bg-amber-100'">
+                                            <span x-text="user.disabled ? 'Enable' : 'Disable'"></span>
+                                        </button>
+                                    </form>
 
-                                {{-- RESET PASSWORD --}}
-                                <form method="POST" action="/hotspot-users/{{ $user['.id'] }}/reset-password" class="flex items-center gap-1">
-                                    @csrf
-                                    <input type="password" name="password" placeholder="New pass"
-                                           class="w-20 px-2 py-1 text-[11px] border border-gray-200 rounded-md focus:ring-1 focus:ring-amber-300 focus:border-amber-300" required>
-                                    <button class="text-[11px] font-medium px-2 py-1 rounded-md text-blue-600 bg-blue-50 hover:bg-blue-100 transition">Reset</button>
-                                </form>
+                                    {{-- RESET PASSWORD --}}
+                                    <form method="POST" :action="`/hotspot-users/${user.id}/reset-password`" class="flex items-center gap-1">
+                                        <input type="hidden" name="_token" value="{{ csrf_token() }}">
+                                        <input type="password" name="password" placeholder="New pass"
+                                               class="w-20 px-2 py-1 text-[11px] border border-gray-200 rounded-md focus:ring-1 focus:ring-amber-300 focus:border-amber-300" required>
+                                        <button class="text-[11px] font-medium px-2 py-1 rounded-md text-blue-600 bg-blue-50 hover:bg-blue-100 transition">Reset</button>
+                                    </form>
 
-                                {{-- DELETE --}}
-                                <form method="POST" action="{{ route('hotspot.destroy', $user['.id']) }}"
-                                      onsubmit="return confirm('Yakin hapus {{ $user['name'] }}?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button class="text-[11px] font-medium px-2 py-1 rounded-md text-red-500 bg-red-50 hover:bg-red-100 transition">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                    @endforeach
+                                    {{-- DELETE --}}
+                                    <form method="POST" :action="`/hotspot-users/${user.id}`" onsubmit="return confirm('Yakin hapus user ini?')">
+                                        <input type="hidden" name="_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="_method" value="DELETE">
+                                        <button class="text-[11px] font-medium px-2 py-1 rounded-md text-red-500 bg-red-50 hover:bg-red-100 transition">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
                 </tbody>
             </table>
         </div>
-
-        @if(count($users) === 0)
-        <div class="py-12 text-center text-gray-400">
+        <div class="py-12 text-center text-gray-400" x-show="users.length === 0">
             <i class="fas fa-user-slash text-3xl mb-3"></i>
             <p class="text-sm">Belum ada user hotspot terdaftar</p>
         </div>
-        @endif
     </div>
 
 </div>

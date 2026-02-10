@@ -6,6 +6,7 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
         <title>Daftar Hotspot - Mahasiswa - UMPKU Surakarta</title>
+        <link rel="icon" type="image/png" href="{{ asset('img/logogram.png') }}" />
 
         <!-- Fonts & Icons -->
         <link rel="preconnect" href="https://fonts.bunny.net">

@@ -1,4 +1,4 @@
-<x-guest-layout>
+<x-guest-layout :title="'Admin UMPKU Surakarta'">
     <div class="glass-card rounded-2xl p-8">
         {{-- Logo --}}
         <div class="text-center mb-8">
