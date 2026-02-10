@@ -200,11 +200,11 @@
             </div>
         </div>
 
-        {{-- USER AKTIF (REALTIME) --}}
+        {{-- USER AKTIF / MENGGUNAKAN JARINGAN (REALTIME) --}}
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                 <h3 class="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                    <i class="fas fa-signal text-green-500"></i> User Online
+                    <i class="fas fa-wifi text-green-500"></i> Sedang Menggunakan Jaringan
                     <span class="inline-flex items-center gap-1 text-[10px] text-green-500 font-normal">
                         <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Live
                     </span>
@@ -218,13 +218,13 @@
                 <template x-if="activesLoading">
                     <div class="px-5 py-8 text-center text-gray-400 text-sm">
                         <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
-                        <p>Memuat user online...</p>
+                        <p>Memuat user aktif...</p>
                     </div>
                 </template>
                 <template x-if="!activesLoading && actives.length === 0">
                     <div class="px-5 py-8 text-center text-gray-400 text-sm">
                         <i class="fas fa-wifi text-2xl mb-2 opacity-30"></i>
-                        <p>Tidak ada user online</p>
+                        <p>Tidak ada user menggunakan jaringan</p>
                     </div>
                 </template>
                 <template x-for="(a, i) in actives" :key="i">
@@ -236,7 +236,13 @@
                                 <p class="text-[11px] text-gray-400" x-text="a.address"></p>
                             </div>
                         </div>
-                        <span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded font-mono" x-text="a.uptime"></span>
+                        <div class="text-right">
+                            <span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded font-mono" x-text="a.uptime"></span>
+                            <div class="flex items-center gap-2 mt-1 text-[10px]">
+                                <span class="text-blue-500"><i class="fas fa-arrow-up text-[8px]"></i> <span x-text="a.tx"></span></span>
+                                <span class="text-green-500"><i class="fas fa-arrow-down text-[8px]"></i> <span x-text="a.rx"></span></span>
+                            </div>
+                        </div>
                     </div>
                 </template>
             </div>
@@ -245,11 +251,11 @@
         {{-- BANDWIDTH MONITORING (REALTIME) --}}
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
              x-data="{
-                queues: [], bwLoading: true, bwError: false, lastUpdate: null,
+                queues: [], bwLoading: true, bwError: false,
                 formatBytes(bytes) {
-                    if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + ' Mbps';
-                    if (bytes >= 1024) return (bytes / 1024).toFixed(1) + ' Kbps';
-                    return bytes + ' bps';
+                    if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + 'M';
+                    if (bytes >= 1024) return (bytes / 1024).toFixed(0) + 'K';
+                    return bytes + 'b';
                 },
                 async fetchBandwidth() {
                     try {
@@ -257,7 +263,6 @@
                         if (!res.ok) throw new Error();
                         this.queues = await res.json();
                         this.bwError = false;
-                        this.lastUpdate = new Date().toLocaleTimeString('id-ID');
                     } catch (e) { this.bwError = true; }
                     finally { this.bwLoading = false; }
                 }
@@ -270,22 +275,19 @@
                         <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Live
                     </span>
                 </h3>
-                <div class="flex items-center gap-2">
-                    <span x-show="lastUpdate" x-text="lastUpdate" class="text-[10px] text-gray-400"></span>
-                    <span x-text="queues.length + ' queue'" class="text-xs text-gray-400"></span>
-                </div>
+                <span class="text-xs text-gray-400" x-text="queues.length + ' queue'"></span>
             </div>
             <div class="divide-y divide-gray-50 max-h-72 overflow-y-auto">
                 <template x-if="bwLoading">
                     <div class="px-5 py-8 text-center text-gray-400 text-sm">
                         <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
-                        <p>Memuat data bandwidth...</p>
+                        <p>Memuat bandwidth...</p>
                     </div>
                 </template>
                 <template x-if="!bwLoading && bwError">
                     <div class="px-5 py-8 text-center text-red-400 text-sm">
                         <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
-                        <p>Gagal memuat data bandwidth</p>
+                        <p>Gagal memuat bandwidth</p>
                     </div>
                 </template>
                 <template x-if="!bwLoading && !bwError && queues.length === 0">
@@ -295,37 +297,19 @@
                     </div>
                 </template>
                 <template x-for="(q, i) in queues" :key="i">
-                    <div class="px-5 py-3 hover:bg-gray-50/50 transition">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center gap-2">
-                                <div class="w-7 h-7 bg-purple-100 rounded-md flex items-center justify-center">
-                                    <i class="fas fa-network-wired text-purple-500 text-xs"></i>
-                                </div>
-                                <div>
-                                    <p class="text-sm font-medium text-gray-800 truncate max-w-[120px]" x-text="q.name"></p>
-                                    <p class="text-[10px] text-gray-400" x-text="q.target"></p>
-                                </div>
+                    <div class="px-5 py-2.5 flex items-center justify-between hover:bg-gray-50/50 transition">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-7 h-7 bg-purple-100 rounded-md flex items-center justify-center">
+                                <i class="fas fa-network-wired text-purple-500 text-[10px]"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-800 truncate max-w-[110px]" x-text="q.name"></p>
+                                <p class="text-[10px] text-gray-400" x-text="q.target"></p>
                             </div>
                         </div>
-                        <div class="flex items-center gap-3 text-[11px]">
-                            <div class="flex-1">
-                                <div class="flex justify-between text-gray-400 mb-1">
-                                    <span><i class="fas fa-arrow-up text-blue-400"></i> Up</span>
-                                    <span class="font-medium text-blue-600" x-text="formatBytes(q.upload)"></span>
-                                </div>
-                                <div class="w-full h-1 bg-gray-100 rounded-full overflow-hidden">
-                                    <div class="h-full bg-blue-400 rounded-full transition-all duration-500" :style="'width:' + q.upPercent + '%'"></div>
-                                </div>
-                            </div>
-                            <div class="flex-1">
-                                <div class="flex justify-between text-gray-400 mb-1">
-                                    <span><i class="fas fa-arrow-down text-green-400"></i> Down</span>
-                                    <span class="font-medium text-green-600" x-text="formatBytes(q.download)"></span>
-                                </div>
-                                <div class="w-full h-1 bg-gray-100 rounded-full overflow-hidden">
-                                    <div class="h-full bg-green-400 rounded-full transition-all duration-500" :style="'width:' + q.downPercent + '%'"></div>
-                                </div>
-                            </div>
+                        <div class="flex items-center gap-2 text-[11px]">
+                            <span class="text-blue-500 font-medium"><i class="fas fa-arrow-up text-[9px]"></i> <span x-text="formatBytes(q.upload)"></span></span>
+                            <span class="text-green-500 font-medium"><i class="fas fa-arrow-down text-[9px]"></i> <span x-text="formatBytes(q.download)"></span></span>
                         </div>
                     </div>
                 </template>

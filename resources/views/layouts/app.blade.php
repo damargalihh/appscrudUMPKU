@@ -71,15 +71,10 @@
                 <div class="flex items-center justify-between px-6 py-3">
                     <div>
                         <h2 class="text-lg font-semibold text-[#1a1a2e]">@yield('page-title', 'Dashboard')</h2>
-                        <p class="text-xs text-[#4a4a6a]">Universitas Muhammadiyah Prof. KH. Usman — Surakarta</p>
+                        <p class="text-xs text-[#4a4a6a]">Universitas Muhammadiyah PKU Surakarta</p>
                     </div>
 
                     <div class="flex items-center gap-4">
-                        {{-- Notification Bell --}}
-                        <button class="relative text-[#4a4a6a] hover:text-primary transition">
-                            <i class="fas fa-bell text-lg"></i>
-                        </button>
-
                         {{-- User Dropdown --}}
                         <div x-data="{ open: false }" class="relative">
                             <button @click="open = !open" class="flex items-center gap-2 text-sm text-[#4a4a6a] hover:text-[#1a1a2e] transition">

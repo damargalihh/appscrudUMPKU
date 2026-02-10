@@ -177,11 +177,24 @@ class HotspotUserController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
 
-        return response()->json(collect($actives)->map(fn($a) => [
-            'user'    => $a['user'] ?? '-',
-            'address' => $a['address'] ?? '-',
-            'uptime'  => $a['uptime'] ?? '-',
-        ]));
+        $formatBytes = function ($bytes) {
+            $bytes = intval($bytes);
+            if ($bytes >= 1073741824) return round($bytes / 1073741824, 1) . ' GB';
+            if ($bytes >= 1048576) return round($bytes / 1048576, 1) . ' MB';
+            if ($bytes >= 1024) return round($bytes / 1024, 1) . ' KB';
+            return $bytes . ' B';
+        };
+
+        return response()->json(collect($actives)
+            ->filter(fn($a) => (intval($a['bytes-in'] ?? 0) + intval($a['bytes-out'] ?? 0)) > 0)
+            ->values()
+            ->map(fn($a) => [
+                'user'    => $a['user'] ?? '-',
+                'address' => $a['address'] ?? '-',
+                'uptime'  => $a['uptime'] ?? '-',
+                'rx'      => $formatBytes($a['bytes-in'] ?? 0),
+                'tx'      => $formatBytes($a['bytes-out'] ?? 0),
+            ]));
     }
 
     /**
