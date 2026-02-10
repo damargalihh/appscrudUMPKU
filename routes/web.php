@@ -36,7 +36,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/api/active-users', [HotspotUserController::class, 'apiActiveUsers'])->name('api.activeUsers');
 });
 
-Route::get('/register-hotspot', [SelfRegisterController::class, 'showRegister']);
+// Route::get('/register-hotspot', [SelfRegisterController::class, 'showRegister']);
+Route::get('/register-hotspot/dosen', [SelfRegisterController::class, 'showRegisterDosen']);
+Route::get('/register-hotspot/mahasiswa', [SelfRegisterController::class, 'showRegisterMahasiswa']);
+Route::get('/register-hotspot/staff', [SelfRegisterController::class, 'showRegisterStaff']);
+Route::get('/register-hotspot/tamu', [SelfRegisterController::class, 'showRegisterTamu']);
 Route::post('/register-hotspot', [SelfRegisterController::class, 'selfRegister'])
     ->name('hotspot.selfRegister');
 

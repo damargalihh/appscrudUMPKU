@@ -7,9 +7,29 @@ use App\Services\MikrotikService;
 
 class SelfRegisterController extends Controller
 {
-    public function showRegister()
+    // public function showRegister()
+    // {
+    //     return view('hotspot.register');
+    // }
+
+    public function showRegisterDosen()
     {
-        return view('hotspot.register');
+        return view('hotspot.register-dosen');
+    }
+
+    public function showRegisterMahasiswa()
+    {
+        return view('hotspot.register-mahasiswa');
+    }
+
+    public function showRegisterStaff()
+    {
+        return view('hotspot.register-staff');
+    }
+
+    public function showRegisterTamu()
+    {
+        return view('hotspot.register-tamu');
     }
     
     public function selfRegister(Request $request, MikrotikService $mt)
@@ -26,9 +46,7 @@ class SelfRegisterController extends Controller
                 'profile' => $request->profile,
             ]);
     
-            return redirect()
-                ->route('hotspot.selfRegister')
-                ->with('success', 'Registrasi berhasil');
+            return back()->with('success', 'Registrasi berhasil');
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
         }
