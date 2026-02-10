@@ -5,9 +5,9 @@
 <div class="space-y-6">
 
     {{-- HEADER --}}
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-            <h1 class="text-lg font-bold text-gray-800">Manajemen User Hotspot</h1>
+            <h1 class="text-base md:text-lg font-bold text-gray-800">Manajemen User Hotspot</h1>
             <p class="text-xs text-gray-400 mt-0.5">Tambah, edit, dan kelola user MikroTik hotspot</p>
         </div>
         <span class="text-xs bg-gray-100 text-gray-500 px-3 py-1 rounded-full font-medium">
@@ -16,7 +16,7 @@
     </div>
 
     {{-- FORM TAMBAH USER --}}
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-5">
         <h3 class="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
             <i class="fas fa-user-plus text-orange-500"></i> Tambah User Baru
         </h3>
@@ -52,7 +52,7 @@
     {{-- TABEL USER --}}
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" x-data="{ search: '', filter: 'all', profileFilter: 'all' }">
         {{-- SEARCH & FILTER BAR --}}
-        <div class="px-5 py-4 border-b border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div class="px-4 md:px-5 py-4 border-b border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
                 <i class="fas fa-list text-blue-500"></i> Daftar User
                 <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">{{ count($users) }}</span>
@@ -81,11 +81,11 @@
             <table class="w-full">
                 <thead>
                     <tr class="bg-gray-50 text-left">
-                        <th class="px-5 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">#</th>
-                        <th class="px-5 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Username</th>
-                        <th class="px-5 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Profile</th>
-                        <th class="px-5 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Status</th>
-                        <th class="px-5 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Aksi</th>
+                        <th class="px-4 md:px-5 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">#</th>
+                        <th class="px-4 md:px-5 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Username</th>
+                        <th class="px-4 md:px-5 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Profile</th>
+                        <th class="px-4 md:px-5 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Status</th>
+                        <th class="px-4 md:px-5 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50">
@@ -95,8 +95,8 @@
                                 && (filter === 'all' || (filter === 'active' && '{{ $user['disabled'] ?? 'false' }}' !== 'true') || (filter === 'disabled' && '{{ $user['disabled'] ?? 'false' }}' === 'true'))
                                 && (profileFilter === 'all' || '{{ strtolower($user['profile'] ?? '') }}' === profileFilter)"
                         x-transition>
-                        <td class="px-5 py-3 text-xs text-gray-400">{{ $i + 1 }}</td>
-                        <td class="px-5 py-3">
+                        <td class="px-4 md:px-5 py-3 text-xs text-gray-400">{{ $i + 1 }}</td>
+                        <td class="px-4 md:px-5 py-3">
                             <div class="flex items-center gap-2.5">
                                 <div class="w-7 h-7 bg-gradient-to-br from-blue-400 to-blue-600 rounded-md flex items-center justify-center text-white text-[10px] font-bold">
                                     {{ strtoupper(substr($user['name'], 0, 1)) }}
@@ -104,10 +104,10 @@
                                 <span class="text-sm font-medium text-gray-800">{{ $user['name'] }}</span>
                             </div>
                         </td>
-                        <td class="px-5 py-3">
+                        <td class="px-4 md:px-5 py-3">
                             <span class="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded font-medium">{{ $user['profile'] ?? '-' }}</span>
                         </td>
-                        <td class="px-5 py-3">
+                        <td class="px-4 md:px-5 py-3">
                             @if(($user['disabled'] ?? 'false') === 'true')
                                 <span class="inline-flex items-center gap-1 text-xs text-red-500 bg-red-50 px-2 py-0.5 rounded font-medium">
                                     <span class="w-1.5 h-1.5 bg-red-400 rounded-full"></span> Disabled
@@ -118,7 +118,7 @@
                                 </span>
                             @endif
                         </td>
-                        <td class="px-5 py-3">
+                        <td class="px-4 md:px-5 py-3">
                             <div class="flex items-center gap-1.5 flex-wrap">
                                 {{-- TOGGLE --}}
                                 <form method="POST" action="/hotspot-users/{{ $user['.id'] }}/{{ ($user['disabled'] ?? 'false') === 'true' ? 'enable' : 'disable' }}">

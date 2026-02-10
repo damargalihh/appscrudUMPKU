@@ -3,7 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ config('app.name', 'WiFi Manager UMPKU') }}</title>
+    <title>Admin Hotspot - UMPKU Surakarta</title>
+    <link rel="icon" type="image/png" href="{{ asset('img/logogram.png') }}" />
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=poppins:400,500,600,700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
@@ -20,7 +21,7 @@
     <div class="relative z-10 min-h-screen flex">
 
         {{-- SIDEBAR (orange theme) --}}
-        <aside :class="sidebarOpen ? 'w-64' : 'w-20'" class="fixed inset-y-0 left-0 z-30 bg-gradient-to-b from-[#FF8C00] to-[#E65100] text-white transition-all duration-300 flex flex-col shadow-2xl">
+        <aside :class="sidebarOpen ? 'w-64' : 'w-20'" class="fixed inset-y-0 left-0 z-30 bg-gradient-to-b from-[#FF8C00] to-[#E65100] text-white transition-all duration-300 flex flex-col shadow-2xl translate-x-0">
             {{-- Logo --}}
             <div class="flex items-center gap-3 px-5 py-5 border-b border-white/20">
                 <img src="{{ asset('img/logoputih.png') }}" alt="Logo UMPKU" class="w-10 h-10 rounded-lg object-contain flex-shrink-0">
@@ -63,25 +64,25 @@
         </aside>
 
         {{-- MAIN CONTENT --}}
-        <div :class="sidebarOpen ? 'ml-64' : 'ml-20'" class="flex-1 transition-all duration-300 flex flex-col min-h-screen">
+        <div :class="sidebarOpen ? 'md:ml-64' : 'md:ml-20'" class="ml-20 flex-1 transition-all duration-300 flex flex-col min-h-screen">
 
             {{-- TOP NAVBAR (only on dashboard, hides on scroll) --}}
             @if(request()->routeIs('dashboard'))
             <header x-show="navbarVisible" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 -translate-y-full" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-full" class="sticky top-0 z-20 bg-white/95 border-b border-black/10 shadow-[0_2px_15px_rgba(0,0,0,0.08)]">
-                <div class="flex items-center justify-between px-6 py-3">
+                <div class="flex items-center justify-between px-4 md:px-6 py-3">
                     <div>
-                        <h2 class="text-lg font-semibold text-[#1a1a2e]">@yield('page-title', 'Dashboard')</h2>
+                        <h2 class="text-base md:text-lg font-semibold text-[#1a1a2e]">@yield('page-title', 'Dashboard')</h2>
                         <p class="text-xs text-[#4a4a6a]">Universitas Muhammadiyah PKU Surakarta</p>
                     </div>
 
-                    <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2 md:gap-4">
                         {{-- User Dropdown --}}
                         <div x-data="{ open: false }" class="relative">
                             <button @click="open = !open" class="flex items-center gap-2 text-sm text-[#4a4a6a] hover:text-[#1a1a2e] transition">
                                 <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-xs font-bold shadow-md">
                                     {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
                                 </div>
-                                <span class="hidden sm:block font-medium">{{ auth()->user()->name }}</span>
+                                <span class="hidden md:block font-medium">{{ auth()->user()->name }}</span>
                                 <i class="fas fa-chevron-down text-xs"></i>
                             </button>
 
@@ -105,23 +106,23 @@
 
             {{-- FLASH MESSAGES --}}
             @if(session('success'))
-            <div class="mx-6 mt-4 px-4 py-3 rounded-xl bg-green-50 border border-green-200 text-green-700 text-sm flex items-center gap-2">
+            <div class="mx-4 md:mx-6 mt-4 px-4 py-3 rounded-xl bg-green-50 border border-green-200 text-green-700 text-sm flex items-center gap-2">
                 <i class="fas fa-check-circle"></i> {{ session('success') }}
             </div>
             @endif
             @if(session('error'))
-            <div class="mx-6 mt-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-primary text-sm flex items-center gap-2">
+            <div class="mx-4 md:mx-6 mt-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-primary text-sm flex items-center gap-2">
                 <i class="fas fa-exclamation-circle"></i> {{ session('error') }}
             </div>
             @endif
 
             {{-- PAGE CONTENT --}}
-            <main class="p-6 flex-1">
+            <main class="p-4 md:p-6 flex-1">
                 {{ $slot }}
             </main>
 
             {{-- FOOTER (fixed bottom) --}}
-            <footer class="bg-white/80 border-t border-gray-100 px-6 py-3 text-center mt-auto">
+            <footer class="bg-white/80 border-t border-gray-100 px-4 md:px-6 py-3 text-center mt-auto">
                 <p class="text-gray-400 text-xs">&copy; {{ date('Y') }} WiFi Manager — UMPKU Surakarta</p>
             </footer>
         </div>

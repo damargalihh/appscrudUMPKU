@@ -9,7 +9,7 @@ use App\Http\Controllers\SelfRegisterController;
 Route::get('/test-mt', [TestMikrotikController::class, 'index']);
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route('login');
 });
 
 Route::middleware('auth')->group(function () {

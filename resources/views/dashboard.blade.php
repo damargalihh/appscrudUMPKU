@@ -3,7 +3,7 @@
 @section('page-title', 'Dashboard')
 
 {{-- MASTER REALTIME CONTROLLER --}}
-<div class="space-y-6"
+<div class="space-y-4 md:space-y-6"
      x-data="{
         // Stat card data
         stats: { total: 0, online: 0, enabled: 0, disabled: 0, time: '' },
@@ -12,7 +12,9 @@
         // Active users
         actives: [], activesLoading: true,
         // Chart
-        labels: [], onlineData: [], totalData: [], chart: null, maxPoints: 20, chartLoading: true,
+        labels: [], onlineData: [], totalData: [], maxPoints: 30, chartLoading: true,
+        // Non-reactive chart data
+        chartData: { labels: [], onlineData: [], totalData: [] },
 
         async fetchStats() {
             try {
@@ -20,18 +22,23 @@
                 if (!res.ok) throw new Error();
                 const data = await res.json();
                 this.stats = data;
-                this.labels.push(data.time);
+                // Use current time for label (client clock, more real-time)
+                const now = new Date();
+                const label = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                this.labels.push(label);
                 this.onlineData.push(data.online);
                 this.totalData.push(data.total);
                 if (this.labels.length > this.maxPoints) {
                     this.labels.shift(); this.onlineData.shift(); this.totalData.shift();
                 }
-                if (this.chart) {
-                    this.chart.data.labels = this.labels;
-                    this.chart.data.datasets[0].data = this.onlineData;
-                    this.chart.data.datasets[1].data = this.totalData;
-                    this.chart.update('none');
-                }
+                // Update non-reactive chart data
+                this.chartData.labels = [...this.labels];
+                this.chartData.onlineData = [...this.onlineData];
+                this.chartData.totalData = [...this.totalData];
+                // Update chart asynchronously
+                setTimeout(() => {
+                    updateChart(this.chartData);
+                }, 0);
             } catch (e) { console.error(e); }
             finally { this.chartLoading = false; }
         },
@@ -51,100 +58,76 @@
             } catch (e) { console.error(e); }
             finally { this.activesLoading = false; }
         },
-        initChart() {
-            const ctx = this.$refs.userChart.getContext('2d');
-            const g1 = ctx.createLinearGradient(0, 0, 0, 250);
-            g1.addColorStop(0, 'rgba(34,197,94,0.25)'); g1.addColorStop(1, 'rgba(34,197,94,0)');
-            const g2 = ctx.createLinearGradient(0, 0, 0, 250);
-            g2.addColorStop(0, 'rgba(59,130,246,0.12)'); g2.addColorStop(1, 'rgba(59,130,246,0)');
-            this.chart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: this.labels,
-                    datasets: [
-                        { label: 'User Online', data: this.onlineData, borderColor: '#22c55e', backgroundColor: g1, borderWidth: 2.5, fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#22c55e', pointBorderColor: '#fff', pointBorderWidth: 2, pointHoverRadius: 5 },
-                        { label: 'Total User', data: this.totalData, borderColor: '#3b82f6', backgroundColor: g2, borderWidth: 2, fill: true, tension: 0.4, pointRadius: 2, pointBackgroundColor: '#3b82f6', pointBorderColor: '#fff', pointBorderWidth: 1.5, borderDash: [5,3] },
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    interaction: { intersect: false, mode: 'index' },
-                    plugins: {
-                        legend: { display: true, position: 'top', align: 'end', labels: { boxWidth: 12, boxHeight: 3, font: { size: 11 }, padding: 15 } },
-                        tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', titleFont: { size: 11 }, bodyFont: { size: 12 }, padding: 10, cornerRadius: 8, displayColors: true }
-                    },
-                    scales: {
-                        x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#9ca3af', maxRotation: 0 } },
-                        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 }, color: '#9ca3af', stepSize: 1, precision: 0 } }
-                    },
-                    animation: { duration: 400 }
-                }
-            });
-        },
         async init() {
-            await Promise.all([this.fetchStats(), this.fetchProfiles(), this.fetchActives()]);
-            this.initChart();
-            setInterval(() => { this.fetchStats(); this.fetchProfiles(); this.fetchActives(); }, 5000);
+            // Ambil data awal agar chart tidak kosong
+            await this.fetchStats();
+            await Promise.all([this.fetchProfiles(), this.fetchActives()]);
+            // Update chart setiap detik
+            setInterval(() => {
+                this.fetchStats();
+            }, 1000);
+            // Update data lain tiap 5 detik
+            setInterval(() => {
+                this.fetchProfiles();
+                this.fetchActives();
+            }, 5000);
         }
      }"
      x-init="init()">
 
     {{-- WELCOME BANNER --}}
-    <div class="rounded-2xl bg-gradient-to-r from-[#1a1a2e] via-[#16213e] to-[#0f3460] p-6 flex items-center justify-between shadow-lg">
+    <div class="rounded-2xl bg-gradient-to-r from-[#FF8C00] via-[#FFA726] to-[#E65100] p-3 md:p-6 flex items-center justify-between shadow-xl border border-orange-200/40">
         <div>
-            <h1 class="text-xl font-bold text-white">Halo, {{ auth()->user()->name }} <span class="inline-block animate-bounce">👋</span></h1>
-            <p class="text-white/50 text-sm mt-1">Kelola jaringan WiFi hotspot kampus dari sini.</p>
-            <div class="mt-3 inline-flex items-center gap-2 bg-green-500/15 text-green-400 text-xs font-medium px-3 py-1.5 rounded-full border border-green-500/20">
-                <span class="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span> Semua Data Realtime
-            </div>
+            <h1 class="text-sm md:text-xl font-bold text-white drop-shadow">Halo, {{ auth()->user()->name }} <span class="inline-block animate-bounce">👋</span></h1>
+            <p class="text-white/80 text-xs mt-1">Selamat datang di panel Admin Hotspot UMPKU.</p>
         </div>
-        <div class="hidden md:flex w-24 h-24 rounded-2xl items-center justify-center overflow-hidden">
-            <img src="{{ asset('img/logoadmin.png') }}" alt="Admin" class="w-full h-full object-contain">
+        <div class="hidden md:flex w-32 h-32 rounded-2xl items-center justify-center overflow-hidden bg-transparent">
+            <img src="{{ asset('img/logoadmin.png') }}" alt="Admin" class="w-20 h-20 object-contain">
         </div>
     </div>
 
     {{-- STAT CARDS (REALTIME) --}}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <div class="bg-white rounded-xl p-3 md:p-4 shadow-sm border border-gray-100 hover:shadow-md transition">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold">Total User</p>
-                    <p class="text-2xl font-bold text-gray-800 mt-1" x-text="stats.total">-</p>
+                    <p class="text-xl md:text-2xl font-bold text-gray-800 mt-1" x-text="stats.total">-</p>
                 </div>
-                <div class="w-11 h-11 bg-blue-50 rounded-xl flex items-center justify-center">
+                <div class="w-10 h-10 md:w-11 md:h-11 bg-blue-50 rounded-xl flex items-center justify-center">
                     <i class="fas fa-users text-blue-500"></i>
                 </div>
             </div>
         </div>
-        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition">
+        <div class="bg-white rounded-xl p-3 md:p-4 shadow-sm border border-gray-100 hover:shadow-md transition">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold">User Online</p>
-                    <p class="text-2xl font-bold text-green-600 mt-1" x-text="stats.online">-</p>
+                    <p class="text-xl md:text-2xl font-bold text-green-600 mt-1" x-text="stats.online">-</p>
                 </div>
-                <div class="w-11 h-11 bg-green-50 rounded-xl flex items-center justify-center">
+                <div class="w-10 h-10 md:w-11 md:h-11 bg-green-50 rounded-xl flex items-center justify-center">
                     <i class="fas fa-signal text-green-500"></i>
                 </div>
             </div>
         </div>
-        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition">
+        <div class="bg-white rounded-xl p-3 md:p-4 shadow-sm border border-gray-100 hover:shadow-md transition">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold">Profile</p>
-                    <p class="text-2xl font-bold text-gray-800 mt-1" x-text="profiles.length">-</p>
+                    <p class="text-xl md:text-2xl font-bold text-gray-800 mt-1" x-text="profiles.length">-</p>
                 </div>
-                <div class="w-11 h-11 bg-amber-50 rounded-xl flex items-center justify-center">
+                <div class="w-10 h-10 md:w-11 md:h-11 bg-amber-50 rounded-xl flex items-center justify-center">
                     <i class="fas fa-layer-group text-amber-500"></i>
                 </div>
             </div>
         </div>
-        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition">
+        <div class="bg-white rounded-xl p-3 md:p-4 shadow-sm border border-gray-100 hover:shadow-md transition">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold">Disabled</p>
-                    <p class="text-2xl font-bold text-red-500 mt-1" x-text="stats.disabled">-</p>
+                    <p class="text-xl md:text-2xl font-bold text-red-500 mt-1" x-text="stats.disabled">-</p>
                 </div>
-                <div class="w-11 h-11 bg-red-50 rounded-xl flex items-center justify-center">
+                <div class="w-10 h-10 md:w-11 md:h-11 bg-red-50 rounded-xl flex items-center justify-center">
                     <i class="fas fa-user-slash text-red-400"></i>
                 </div>
             </div>
@@ -156,7 +139,7 @@
 
         {{-- PROFILE HOTSPOT (REALTIME) --}}
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div class="px-4 md:px-5 py-3 md:py-4 border-b border-gray-100 flex items-center justify-between">
                 <h3 class="text-sm font-semibold text-gray-800 flex items-center gap-2">
                     <i class="fas fa-layer-group text-amber-500"></i> Profile
                     <span class="inline-flex items-center gap-1 text-[10px] text-green-500 font-normal">
@@ -179,7 +162,7 @@
                     </div>
                 </template>
                 <template x-for="(p, i) in profiles" :key="i">
-                    <div class="px-5 py-3 flex items-center justify-between hover:bg-gray-50/50 transition group">
+                    <div class="px-4 md:px-5 py-3 flex items-center justify-between hover:bg-gray-50/50 transition group">
                         <div class="flex items-center gap-3">
                             <div class="w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center text-white text-xs font-bold" x-text="p.name.charAt(0).toUpperCase()"></div>
                             <div>
@@ -202,7 +185,7 @@
 
         {{-- USER AKTIF / MENGGUNAKAN JARINGAN (REALTIME) --}}
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div class="px-4 md:px-5 py-3 md:py-4 border-b border-gray-100 flex items-center justify-between">
                 <h3 class="text-sm font-semibold text-gray-800 flex items-center gap-2">
                     <i class="fas fa-wifi text-green-500"></i> Sedang Menggunakan Jaringan
                     <span class="inline-flex items-center gap-1 text-[10px] text-green-500 font-normal">
@@ -228,7 +211,7 @@
                     </div>
                 </template>
                 <template x-for="(a, i) in actives" :key="i">
-                    <div class="px-5 py-3 flex items-center justify-between hover:bg-gray-50/50 transition">
+                    <div class="px-4 md:px-5 py-3 flex items-center justify-between hover:bg-gray-50/50 transition">
                         <div class="flex items-center gap-3">
                             <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center text-white text-xs font-bold" x-text="a.user.charAt(0).toUpperCase()"></div>
                             <div>
@@ -268,7 +251,7 @@
                 }
              }"
              x-init="fetchBandwidth(); setInterval(() => fetchBandwidth(), 5000)">
-            <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div class="px-4 md:px-5 py-3 md:py-4 border-b border-gray-100 flex items-center justify-between">
                 <h3 class="text-sm font-semibold text-gray-800 flex items-center gap-2">
                     <i class="fas fa-tachometer-alt text-purple-500"></i> Bandwidth
                     <span x-show="!bwLoading" class="inline-flex items-center gap-1 text-[10px] text-green-500 font-normal">
@@ -336,7 +319,7 @@
                 }
              }"
              x-init="fetchInfo(); setInterval(() => fetchInfo(), 10000)">
-            <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div class="px-4 md:px-5 py-3 md:py-4 border-b border-gray-100 flex items-center justify-between">
                 <h3 class="text-sm font-semibold text-gray-800 flex items-center gap-2">
                     <i class="fas fa-server text-indigo-500"></i> Sistem MikroTik
                     <span x-show="!sysLoading && !sysError" class="inline-flex items-center gap-1 text-[10px] text-green-500 font-normal">
@@ -344,7 +327,7 @@
                     </span>
                 </h3>
             </div>
-            <div class="p-5">
+            <div class="p-3 md:p-5">
                 <template x-if="sysLoading">
                     <div class="py-8 text-center text-gray-400 text-sm">
                         <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
@@ -409,7 +392,7 @@
 
         {{-- REALTIME USER CHART --}}
         <div class="lg:col-span-3 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div class="px-4 md:px-5 py-3 md:py-4 border-b border-gray-100 flex items-center justify-between">
                 <h3 class="text-sm font-semibold text-gray-800 flex items-center gap-2">
                     <i class="fas fa-chart-area text-green-500"></i> Grafik Pengguna Realtime
                     <span x-show="!chartLoading" class="inline-flex items-center gap-1 text-[10px] text-green-500 font-normal">
@@ -431,7 +414,7 @@
                     </span>
                 </div>
             </div>
-            <div class="p-5">
+            <div class="p-3 md:p-5">
                 <template x-if="chartLoading">
                     <div class="py-12 text-center text-gray-400 text-sm">
                         <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
@@ -439,7 +422,7 @@
                     </div>
                 </template>
                 <div x-show="!chartLoading" style="height: 280px;">
-                    <canvas x-ref="userChart"></canvas>
+                    <canvas id="userChart"></canvas>
                 </div>
             </div>
         </div>
@@ -450,5 +433,54 @@
 
 {{-- Chart.js CDN --}}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+
+<script>
+let chartInstance = null;
+
+function initChart() {
+    if (chartInstance) return;
+    const ctx = document.getElementById('userChart').getContext('2d');
+    const g1 = ctx.createLinearGradient(0, 0, 0, 250);
+    g1.addColorStop(0, 'rgba(34,197,94,0.25)'); g1.addColorStop(1, 'rgba(34,197,94,0)');
+    const g2 = ctx.createLinearGradient(0, 0, 0, 250);
+    g2.addColorStop(0, 'rgba(59,130,246,0.12)'); g2.addColorStop(1, 'rgba(59,130,246,0)');
+    chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                { label: 'User Online', data: [], borderColor: '#22c55e', backgroundColor: g1, borderWidth: 2.5, fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#22c55e', pointBorderColor: '#fff', pointBorderWidth: 2, pointHoverRadius: 5 },
+                { label: 'Total User', data: [], borderColor: '#3b82f6', backgroundColor: g2, borderWidth: 2, fill: true, tension: 0.4, pointRadius: 2, pointBackgroundColor: '#3b82f6', pointBorderColor: '#fff', pointBorderWidth: 1.5, borderDash: [5,3] },
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { intersect: false, mode: 'index' },
+            plugins: {
+                legend: { display: true, position: 'top', align: 'end', labels: { boxWidth: 12, boxHeight: 3, font: { size: 11 }, padding: 15 } },
+                tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', titleFont: { size: 11 }, bodyFont: { size: 12 }, padding: 10, cornerRadius: 8, displayColors: true }
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#9ca3af', maxRotation: 0 } },
+                y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 }, color: '#9ca3af', stepSize: 1, precision: 0 } }
+            },
+            animation: { duration: 400 }
+        }
+    });
+}
+
+function updateChart(data) {
+    if (!chartInstance) return;
+    chartInstance.data.labels = data.labels;
+    chartInstance.data.datasets[0].data = data.onlineData;
+    chartInstance.data.datasets[1].data = data.totalData;
+    chartInstance.update('none');
+}
+
+// Initialize chart after DOM load
+document.addEventListener('DOMContentLoaded', () => {
+    initChart();
+});
+</script>
 
 </x-app-layout>
