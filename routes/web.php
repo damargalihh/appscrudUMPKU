@@ -23,6 +23,7 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('/hotspot-users', [HotspotUserController::class, 'index'])->name('hotspot.index');
     Route::post('/hotspot-users', [HotspotUserController::class, 'store'])->name('hotspot.store');
+    Route::post('/hotspot-users/upload', [HotspotUserController::class, 'uploadXlsx'])->name('hotspot.upload');
     Route::delete('/hotspot-users/{id}', [HotspotUserController::class, 'destroy'])->name('hotspot.destroy');
     Route::post('/hotspot-users/{id}/reset-password', [HotspotUserController::class, 'resetPassword'])->name('hotspot.resetPassword');
     Route::post('/hotspot-users/{id}/disable', [HotspotUserController::class, 'disable']);

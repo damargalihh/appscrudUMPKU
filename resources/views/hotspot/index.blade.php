@@ -13,6 +13,23 @@
         <span class="text-xs bg-gray-100 text-gray-500 px-3 py-1 rounded-full font-medium" x-text="users.length + ' user terdaftar'"></span>
     </div>
 
+    {{-- VALIDATION ERRORS --}}
+    @if ($errors->any())
+        <div class="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
+            <div class="flex items-start gap-2">
+                <i class="fas fa-exclamation-circle mt-0.5"></i>
+                <div>
+                    <p class="font-semibold">Ada masalah pada input:</p>
+                    <ul class="list-disc list-inside mt-1">
+                        @foreach ($errors->all() as $err)
+                            <li>{{ $err }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        </div>
+    @endif
+
     {{-- FORM TAMBAH USER --}}
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-5">
         <h3 class="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
@@ -44,6 +61,24 @@
                     <i class="fas fa-plus"></i> Tambah User
                 </button>
             </div>
+        </form>
+    </div>
+
+    {{-- UPLOAD XLSX --}}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-5">
+        <h3 class="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+            <i class="fas fa-file-excel text-green-600"></i> Upload User dari XLSX
+        </h3>
+        <form method="POST" action="{{ route('hotspot.upload') }}" enctype="multipart/form-data">
+            @csrf
+            <div class="flex flex-col lg:flex-row gap-3 lg:items-center">
+                <input type="file" name="file" accept=".xlsx"
+                       class="w-full lg:w-auto text-sm border border-gray-200 rounded-lg px-3 py-2.5 bg-white focus:ring-2 focus:ring-green-200 focus:border-green-400" required>
+                <button type="submit" class="bg-gradient-to-r from-green-600 to-emerald-600 text-white text-sm font-semibold rounded-lg hover:shadow-md hover:shadow-emerald-200 transition-all flex items-center justify-center gap-2 px-4 py-2.5">
+                    <i class="fas fa-upload"></i> Upload XLSX
+                </button>
+            </div>
+            <p class="text-xs text-gray-400 mt-2">Kolom wajib: username, email, password, profile (baris pertama sebagai header).</p>
         </form>
     </div>
 

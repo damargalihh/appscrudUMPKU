@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Services\MikrotikService;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class HotspotUserController extends Controller
 {
@@ -49,6 +50,103 @@ class HotspotUserController extends Controller
         }
 
         return back()->with('success', 'User hotspot berhasil ditambahkan');
+    }
+
+    /**
+     * Upload user hotspot dari file XLSX
+     */
+    public function uploadXlsx(Request $request, MikrotikService $mt)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx',
+        ]);
+
+        try {
+            $spreadsheet = IOFactory::load($request->file('file')->getRealPath());
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Gagal membaca file XLSX: ' . $e->getMessage());
+        }
+
+        $rows = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
+
+        if (count($rows) < 2) {
+            return back()->with('error', 'File XLSX kosong atau tidak memiliki data.');
+        }
+
+        $header = array_shift($rows);
+        $headerMap = [];
+        foreach ($header as $col => $name) {
+            $key = strtolower(trim((string) $name));
+            if ($key !== '') {
+                $headerMap[$key] = $col;
+            }
+        }
+
+        $requiredColumns = ['username', 'email', 'password', 'profile'];
+        $missing = array_diff($requiredColumns, array_keys($headerMap));
+        if (!empty($missing)) {
+            return back()->with('error', 'Kolom wajib tidak lengkap: ' . implode(', ', $missing));
+        }
+
+        $successCount = 0;
+        $errors = [];
+        $rowNumber = 1;
+
+        foreach ($rows as $row) {
+            $rowNumber++;
+
+            $username = trim((string) ($row[$headerMap['username']] ?? ''));
+            $email = trim((string) ($row[$headerMap['email']] ?? ''));
+            $password = trim((string) ($row[$headerMap['password']] ?? ''));
+            $profile = trim((string) ($row[$headerMap['profile']] ?? ''));
+
+            if ($username === '' && $email === '' && $password === '' && $profile === '') {
+                continue;
+            }
+
+            $rowIssues = [];
+            if ($username === '') {
+                $rowIssues[] = 'username kosong';
+            }
+            if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $rowIssues[] = 'email tidak valid';
+            }
+            if ($password === '') {
+                $rowIssues[] = 'password kosong';
+            }
+            if ($profile === '') {
+                $rowIssues[] = 'profile kosong';
+            }
+
+            if (!empty($rowIssues)) {
+                $errors[] = 'Baris ' . $rowNumber . ': ' . implode(', ', $rowIssues);
+                continue;
+            }
+
+            try {
+                $mt->addHotspotUser([
+                    'name' => $username,
+                    'password' => $password,
+                    'profile' => $profile,
+                    'comment' => $email,
+                ]);
+                $successCount++;
+            } catch (\Throwable $e) {
+                $errors[] = 'Baris ' . $rowNumber . ': ' . $e->getMessage();
+            }
+        }
+
+        $successMessage = 'Upload selesai. Berhasil: ' . $successCount . ' user.';
+
+        if (!empty($errors)) {
+            $preview = array_slice($errors, 0, 5);
+            $suffix = count($errors) > 5 ? ' ...' : '';
+            $errorMessage = 'Gagal: ' . count($errors) . ' baris. ' . implode(' | ', $preview) . $suffix;
+
+            return back()->with('success', $successMessage)->with('error', $errorMessage);
+        }
+
+        return back()->with('success', $successMessage);
     }
 
     /**

@@ -45,12 +45,16 @@ class MikrotikService
      */
     public function addHotspotUser(array $data)
     {
-        return $this->client->query(
-            (new Query('/ip/hotspot/user/add'))
-                ->equal('name', $data['name'])
-                ->equal('password', $data['password'])
-                ->equal('profile', $data['profile'] ?? 'default')
-        )->read();
+        $query = (new Query('/ip/hotspot/user/add'))
+            ->equal('name', $data['name'])
+            ->equal('password', $data['password'])
+            ->equal('profile', $data['profile'] ?? 'default');
+
+        if (!empty($data['comment'])) {
+            $query->equal('comment', $data['comment']);
+        }
+
+        return $this->client->query($query)->read();
     }
 
     /**
