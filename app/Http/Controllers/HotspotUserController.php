@@ -198,6 +198,25 @@ class HotspotUserController extends Controller
     }
 
     /**
+     * API: Hotspot users (JSON)
+     */
+    public function apiHotspotUsers(MikrotikService $mt)
+    {
+        try {
+            $users = $mt->getHotspotUsers();
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+
+        return response()->json(collect($users)->map(fn($u) => [
+            'id'       => $u['.id'] ?? '',
+            'name'     => $u['name'] ?? '-',
+            'profile'  => $u['profile'] ?? '-',
+            'disabled' => ($u['disabled'] ?? 'false') === 'true',
+        ])->values());
+    }
+
+    /**
      * API: System info realtime (JSON)
      */
     public function apiSystemInfo(MikrotikService $mt)

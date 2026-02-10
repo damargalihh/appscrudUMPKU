@@ -33,6 +33,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/api/system-info', [HotspotUserController::class, 'apiSystemInfo'])->name('api.systemInfo');
     Route::get('/api/user-stats', [HotspotUserController::class, 'apiUserStats'])->name('api.userStats');
     Route::get('/api/profiles', [HotspotUserController::class, 'apiProfiles'])->name('api.profiles');
+    Route::get('/api/hotspot-users', [HotspotUserController::class, 'apiHotspotUsers'])->name('api.hotspotUsers');
     Route::get('/api/active-users', [HotspotUserController::class, 'apiActiveUsers'])->name('api.activeUsers');
 });
 
