@@ -183,16 +183,6 @@ class MikrotikService
     }
 
     /**
-     * AMBIL INTERFACE TRAFFIC
-     */
-    public function getInterfaceTraffic()
-    {
-        return $this->client->query(
-            new Query('/interface/print')
-        )->read();
-    }
-
-    /**
      * AMBIL SYSTEM RESOURCE (CPU, Memory, Uptime, dll)
      */
     public function getSystemResource()

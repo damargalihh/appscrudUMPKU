@@ -1,50 +1,81 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HotspotUserController;
-use App\Http\Controllers\TestMikrotikController;
+use App\Http\Controllers\Api\HotspotApiController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SelfRegisterController;
+use App\Http\Controllers\TestMikrotikController;
+use Illuminate\Support\Facades\Route;
 
-Route::get('/test-mt', [TestMikrotikController::class, 'index']);
+/*
+|--------------------------------------------------------------------------
+| Redirect ke login
+|--------------------------------------------------------------------------
+*/
+Route::get('/', fn() => redirect()->route('login'));
 
-Route::get('/', function () {
-    return redirect()->route('login');
-});
+/*
+|--------------------------------------------------------------------------
+| Routes yang membutuhkan autentikasi
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'verified'])->group(function () {
 
-Route::middleware('auth')->group(function () {
+    // Dashboard
+    Route::get('/dashboard', DashboardController::class)->name('dashboard');
+
+    // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    Route::middleware(['auth', 'verified'])->get('/dashboard', [HotspotUserController::class, 'dashboard'])->name('dashboard');
 
-});
+    // Hotspot users CRUD
+    Route::prefix('hotspot-users')->name('hotspot.')->group(function () {
+        Route::get('/', [HotspotUserController::class, 'index'])->name('index');
+        Route::post('/', [HotspotUserController::class, 'store'])->name('store');
+        Route::post('/upload', [HotspotUserController::class, 'uploadXlsx'])->name('upload');
+        Route::post('/bulk-delete', [HotspotUserController::class, 'bulkDestroy'])->name('bulkDestroy');
+        Route::delete('/{id}', [HotspotUserController::class, 'destroy'])->name('destroy');
+        Route::post('/{id}/reset-password', [HotspotUserController::class, 'resetPassword'])->name('resetPassword');
+        Route::post('/{id}/disable', [HotspotUserController::class, 'disable'])->name('disable');
+        Route::post('/{id}/enable', [HotspotUserController::class, 'enable'])->name('enable');
+    });
 
-Route::middleware(['auth'])->group(function () {
-    Route::get('/hotspot-users', [HotspotUserController::class, 'index'])->name('hotspot.index');
-    Route::post('/hotspot-users', [HotspotUserController::class, 'store'])->name('hotspot.store');
-    Route::post('/hotspot-users/upload', [HotspotUserController::class, 'uploadXlsx'])->name('hotspot.upload');
-    Route::delete('/hotspot-users/{id}', [HotspotUserController::class, 'destroy'])->name('hotspot.destroy');
-    Route::post('/hotspot-users/bulk-delete', [HotspotUserController::class, 'bulkDestroy'])->name('hotspot.bulkDestroy');
-    Route::post('/hotspot-users/{id}/reset-password', [HotspotUserController::class, 'resetPassword'])->name('hotspot.resetPassword');
-    Route::post('/hotspot-users/{id}/disable', [HotspotUserController::class, 'disable']);
-    Route::post('/hotspot-users/{id}/enable', [HotspotUserController::class, 'enable']);
-    Route::get('/hotspot-active', [HotspotUserController::class, 'active']);
+    Route::get('/hotspot-active', [HotspotUserController::class, 'active'])->name('hotspot.active');
     Route::delete('/hotspot-profiles/{id}', [HotspotUserController::class, 'destroyProfile'])->name('hotspot.destroyProfile');
-    Route::get('/api/bandwidth', [HotspotUserController::class, 'apiBandwidth'])->name('api.bandwidth');
-    Route::get('/api/system-info', [HotspotUserController::class, 'apiSystemInfo'])->name('api.systemInfo');
-    Route::get('/api/user-stats', [HotspotUserController::class, 'apiUserStats'])->name('api.userStats');
-    Route::get('/api/profiles', [HotspotUserController::class, 'apiProfiles'])->name('api.profiles');
-    Route::get('/api/hotspot-users', [HotspotUserController::class, 'apiHotspotUsers'])->name('api.hotspotUsers');
-    Route::get('/api/active-users', [HotspotUserController::class, 'apiActiveUsers'])->name('api.activeUsers');
+
+    // API endpoints (JSON) untuk dashboard realtime
+    Route::prefix('api')->name('api.')->group(function () {
+        Route::get('/bandwidth', [HotspotApiController::class, 'bandwidth'])->name('bandwidth');
+        Route::get('/system-info', [HotspotApiController::class, 'systemInfo'])->name('systemInfo');
+        Route::get('/user-stats', [HotspotApiController::class, 'userStats'])->name('userStats');
+        Route::get('/profiles', [HotspotApiController::class, 'profiles'])->name('profiles');
+        Route::get('/hotspot-users', [HotspotApiController::class, 'hotspotUsers'])->name('hotspotUsers');
+        Route::get('/active-users', [HotspotApiController::class, 'activeUsers'])->name('activeUsers');
+    });
 });
 
-// Route::get('/register-hotspot', [SelfRegisterController::class, 'showRegister']);
-Route::get('/register-hotspot/dosen', [SelfRegisterController::class, 'showRegisterDosen']);
-Route::get('/register-hotspot/mahasiswa', [SelfRegisterController::class, 'showRegisterMahasiswa']);
-Route::get('/register-hotspot/staff', [SelfRegisterController::class, 'showRegisterStaff']);
-Route::get('/register-hotspot/tamu', [SelfRegisterController::class, 'showRegisterTamu']);
-Route::post('/register-hotspot', [SelfRegisterController::class, 'selfRegister'])
-    ->name('hotspot.selfRegister');
+/*
+|--------------------------------------------------------------------------
+| Self-registration hotspot (publik, tanpa login)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('register-hotspot')->group(function () {
+    Route::get('/dosen', [SelfRegisterController::class, 'showForm'])->defaults('role', 'dosen');
+    Route::get('/mahasiswa', [SelfRegisterController::class, 'showForm'])->defaults('role', 'mahasiswa');
+    Route::get('/staff', [SelfRegisterController::class, 'showForm'])->defaults('role', 'staff');
+    Route::get('/tamu', [SelfRegisterController::class, 'showForm'])->defaults('role', 'tamu');
+    Route::post('/', [SelfRegisterController::class, 'selfRegister'])->name('hotspot.selfRegister');
+});
 
-require __DIR__.'/auth.php';
+/*
+|--------------------------------------------------------------------------
+| Debug / Test (nonaktifkan di production)
+|--------------------------------------------------------------------------
+*/
+if (app()->environment('local')) {
+    Route::get('/test-mt', [TestMikrotikController::class, 'index']);
+}
+
+require __DIR__ . '/auth.php';

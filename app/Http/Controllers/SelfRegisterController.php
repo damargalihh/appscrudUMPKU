@@ -2,50 +2,34 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Http\Requests\SelfRegisterRequest;
 use App\Services\MikrotikService;
+use Illuminate\Http\Request;
 
 class SelfRegisterController extends Controller
 {
-    // public function showRegister()
-    // {
-    //     return view('hotspot.register');
-    // }
-
-    public function showRegisterDosen()
+    /**
+     * Tampilkan form registrasi berdasarkan role (dosen, mahasiswa, staff, tamu).
+     */
+    public function showForm(Request $request)
     {
-        return view('hotspot.register-dosen');
+        $role = $request->route()->defaults['role'] ?? 'tamu';
+        $view = "hotspot.register-{$role}";
+
+        if (!view()->exists($view)) {
+            abort(404);
+        }
+
+        return view($view);
     }
 
-    public function showRegisterMahasiswa()
+    /**
+     * Proses self-registration hotspot user.
+     */
+    public function selfRegister(SelfRegisterRequest $request, MikrotikService $mt)
     {
-        return view('hotspot.register-mahasiswa');
-    }
-
-    public function showRegisterStaff()
-    {
-        return view('hotspot.register-staff');
-    }
-
-    public function showRegisterTamu()
-    {
-        return view('hotspot.register-tamu');
-    }
-    
-    public function selfRegister(Request $request, MikrotikService $mt)
-    {
-        $request->validate([
-            'name' => 'required',
-            'password' => 'required|min:4',
-        ]);
-    
         try {
-            $mt->addHotspotUser([
-                'name' => $request->name,
-                'password' => $request->password,
-                'profile' => $request->profile,
-            ]);
-    
+            $mt->addHotspotUser($request->validated());
             return back()->with('success', 'Registrasi berhasil');
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
