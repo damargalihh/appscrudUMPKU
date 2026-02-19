@@ -80,6 +80,9 @@ class LoginRequest extends FormRequest
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+        // Gunakan header CF-Connecting-IP (real client IP dari Cloudflare)
+        $ip = $this->header('CF-Connecting-IP', $this->ip());
+
+        return Str::transliterate(Str::lower($this->string('email')).'|'.$ip);
     }
 }

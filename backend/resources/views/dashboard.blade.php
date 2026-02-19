@@ -2,94 +2,142 @@
 
 @section('page-title', 'Dashboard')
 
-{{-- MASTER REALTIME CONTROLLER --}}
+{{-- MASTER CONTROLLER — fetch once, refresh manual, update only on change --}}
 <div class="space-y-4 md:space-y-6"
      x-data="{
-        // Stat card data
+        // Data
         stats: { total: 0, online: 0, enabled: 0, disabled: 0, time: '' },
-        // Profiles
-        profiles: [], profilesLoading: true,
-        // Active users
-        actives: [], activesLoading: true,
-        // Chart
-        labels: [], onlineData: [], totalData: [], maxPoints: 30, chartLoading: true,
-        // Non-reactive chart data
+        profiles: [],
+        actives: [],
+        // Chart history
+        labels: [], onlineData: [], totalData: [], maxPoints: 30,
         chartData: { labels: [], onlineData: [], totalData: [] },
+        // UI state
+        loading: true,
+        refreshing: false,
+        lastUpdated: null,
+        dataCached: false,
+        error: false,
+        // Auto-refresh (realtime)
+        autoRefresh: true,
+        _refreshTimer: null,
+        refreshIntervalSec: 20,
+        countdown: 0,
+        _countdownTimer: null,
+        _fetching: false,
 
-        // Flags to prevent overlapping requests
-        _fetchingStats: false,
-        _fetchingProfiles: false,
-        _fetchingActives: false,
-        _destroyed: false,
+        // Deep compare helper
+        hasChanged(oldData, newData) {
+            return JSON.stringify(oldData) !== JSON.stringify(newData);
+        },
 
-        async fetchStats() {
-            if (this._fetchingStats || this._destroyed) return;
-            this._fetchingStats = true;
+        async fetchAll(isRefresh = false) {
+            if (this._fetching && !isRefresh) return; // skip if auto-refresh overlaps
+            this._fetching = true;
+            if (isRefresh) this.refreshing = true;
+            this.error = false;
+            let anySuccess = false;
             try {
-                const res = await fetch('{{ route('api.userStats') }}');
-                if (!res.ok) throw new Error();
-                const data = await res.json();
-                this.stats = data;
-                const now = new Date();
-                const label = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                this.labels.push(label);
-                this.onlineData.push(data.online);
-                this.totalData.push(data.total);
-                if (this.labels.length > this.maxPoints) {
-                    this.labels.shift(); this.onlineData.shift(); this.totalData.shift();
+                const [statsResult, profilesResult, activesResult] = await Promise.allSettled([
+                    fetch('{{ route('api.userStats') }}').then(r => r.ok ? r.json().then(d => ({data: d, headers: r.headers})) : Promise.reject()),
+                    fetch('{{ route('api.profiles') }}').then(r => r.ok ? r.json().then(d => ({data: d, headers: r.headers})) : Promise.reject()),
+                    fetch('{{ route('api.activeUsers') }}').then(r => r.ok ? r.json().then(d => ({data: d, headers: r.headers})) : Promise.reject()),
+                ]);
+
+                let isCached = false;
+
+                if (statsResult.status === 'fulfilled') {
+                    anySuccess = true;
+                    const newStats = statsResult.value.data;
+                    if (statsResult.value.headers.get('X-Data-Cached') === 'true') isCached = true;
+                    if (this.hasChanged(this.stats, newStats)) {
+                        this.stats = newStats;
+                        const now = new Date();
+                        const label = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                        this.labels.push(label);
+                        this.onlineData.push(newStats.online);
+                        this.totalData.push(newStats.total);
+                        if (this.labels.length > this.maxPoints) {
+                            this.labels.shift(); this.onlineData.shift(); this.totalData.shift();
+                        }
+                        this.chartData = { labels: [...this.labels], onlineData: [...this.onlineData], totalData: [...this.totalData] };
+                        setTimeout(() => { updateChart(this.chartData); }, 0);
+                    }
                 }
-                this.chartData.labels = [...this.labels];
-                this.chartData.onlineData = [...this.onlineData];
-                this.chartData.totalData = [...this.totalData];
-                setTimeout(() => { updateChart(this.chartData); }, 0);
-            } catch (e) { console.warn('fetchStats error:', e.message); }
-            finally { this.chartLoading = false; this._fetchingStats = false; }
+
+                if (profilesResult.status === 'fulfilled') {
+                    anySuccess = true;
+                    if (profilesResult.value.headers.get('X-Data-Cached') === 'true') isCached = true;
+                    const newProfiles = profilesResult.value.data;
+                    if (this.hasChanged(this.profiles, newProfiles)) this.profiles = newProfiles;
+                }
+
+                if (activesResult.status === 'fulfilled') {
+                    anySuccess = true;
+                    if (activesResult.value.headers.get('X-Data-Cached') === 'true') isCached = true;
+                    const newActives = activesResult.value.data;
+                    if (this.hasChanged(this.actives, newActives)) this.actives = newActives;
+                }
+
+                this.dataCached = isCached;
+                if (anySuccess) {
+                    this.lastUpdated = new Date();
+                    this.error = false;
+                    window.dispatchEvent(new CustomEvent('dashboard-refresh'));
+                } else {
+                    this.error = true;
+                }
+            } catch (e) {
+                this.error = true;
+                console.warn('fetchAll error:', e.message);
+            } finally {
+                this.loading = false;
+                this.refreshing = false;
+                this._fetching = false;
+            }
         },
-        async fetchProfiles() {
-            if (this._fetchingProfiles || this._destroyed) return;
-            this._fetchingProfiles = true;
-            try {
-                const res = await fetch('{{ route('api.profiles') }}');
-                if (!res.ok) throw new Error();
-                this.profiles = await res.json();
-            } catch (e) { console.warn('fetchProfiles error:', e.message); }
-            finally { this.profilesLoading = false; this._fetchingProfiles = false; }
+
+        startAutoRefresh() {
+            this.stopAutoRefresh();
+            if (!this.autoRefresh) return;
+            this.countdown = this.refreshIntervalSec;
+            this._countdownTimer = setInterval(() => {
+                this.countdown = Math.max(0, this.countdown - 1);
+            }, 1000);
+            this._refreshTimer = setInterval(async () => {
+                this.countdown = this.refreshIntervalSec;
+                await this.fetchAll(false);
+            }, this.refreshIntervalSec * 1000);
         },
-        async fetchActives() {
-            if (this._fetchingActives || this._destroyed) return;
-            this._fetchingActives = true;
-            try {
-                const res = await fetch('{{ route('api.activeUsers') }}');
-                if (!res.ok) throw new Error();
-                this.actives = await res.json();
-            } catch (e) { console.warn('fetchActives error:', e.message); }
-            finally { this.activesLoading = false; this._fetchingActives = false; }
+
+        stopAutoRefresh() {
+            if (this._refreshTimer) { clearInterval(this._refreshTimer); this._refreshTimer = null; }
+            if (this._countdownTimer) { clearInterval(this._countdownTimer); this._countdownTimer = null; }
+            this.countdown = 0;
         },
-        // Recursive setTimeout — next tick only fires AFTER previous completes
-        scheduleStats(interval) {
-            if (this._destroyed) return;
-            setTimeout(async () => {
-                await this.fetchStats();
-                this.scheduleStats(interval);
-            }, interval);
+
+        toggleAutoRefresh() {
+            this.autoRefresh = !this.autoRefresh;
+            if (this.autoRefresh) { this.startAutoRefresh(); } else { this.stopAutoRefresh(); }
         },
-        scheduleOthers(interval) {
-            if (this._destroyed) return;
-            setTimeout(async () => {
-                await Promise.all([this.fetchProfiles(), this.fetchActives()]);
-                this.scheduleOthers(interval);
-            }, interval);
+
+        formatTime() {
+            if (!this.lastUpdated) return '-';
+            return this.lastUpdated.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         },
+
         async init() {
-            await this.fetchStats();
-            await Promise.all([this.fetchProfiles(), this.fetchActives()]);
-            // Stats setiap 5 detik, profiles/actives setiap 10 detik
-            this.scheduleStats(5000);
-            this.scheduleOthers(10000);
+            await this.fetchAll();
+            this.startAutoRefresh();
         },
-        destroy() { this._destroyed = true; }
+
+        destroy() {
+            this.stopAutoRefresh();
+        }
      }"
-     x-init="init()">
+     x-init="init()"
+     @beforeunload.window="destroy()"
+     x-effect="if (!autoRefresh) stopAutoRefresh()">
 
     {{-- WELCOME BANNER --}}
     <div class="rounded-2xl bg-gradient-to-r from-[#FF8C00] via-[#FFA726] to-[#E65100] p-3 md:p-6 flex items-center justify-between shadow-xl border border-orange-200/40">
@@ -97,13 +145,63 @@
             <h1 class="text-sm md:text-xl font-bold text-white drop-shadow">Halo, {{ auth()->user()->name }} <span class="inline-block animate-bounce">👋</span></h1>
             <p class="text-white/80 text-xs mt-1">Selamat datang di panel Admin Hotspot UMPKU.</p>
         </div>
-        <div class="hidden md:flex w-32 h-32 rounded-2xl items-center justify-center overflow-hidden bg-transparent">
-            <img src="{{ asset('img/logoadmin.png') }}" alt="Admin" class="w-20 h-20 object-contain">
+        <div class="flex items-center gap-3">
+            {{-- Auto-refresh toggle + Refresh button + last updated --}}
+            <div class="flex flex-col items-end gap-1">
+                <div class="flex items-center gap-2">
+                    {{-- Auto-refresh toggle --}}
+                    <button @click="toggleAutoRefresh()"
+                            class="flex items-center gap-1.5 text-white text-[10px] font-medium px-2.5 py-1.5 rounded-lg transition"
+                            :class="autoRefresh ? 'bg-green-500/40 hover:bg-green-500/50' : 'bg-white/10 hover:bg-white/20'">
+                        <span class="relative flex h-2 w-2">
+                            <span x-show="autoRefresh" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-300 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2" :class="autoRefresh ? 'bg-green-400' : 'bg-gray-400'"></span>
+                        </span>
+                        <span x-text="autoRefresh ? 'Live' : 'Paused'"></span>
+                        <span x-show="autoRefresh" class="text-white/60" x-text="'(' + countdown + 's)'"></span>
+                    </button>
+                    {{-- Manual refresh --}}
+                    <button @click="fetchAll(true)" :disabled="refreshing"
+                            class="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 backdrop-blur text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition disabled:opacity-50">
+                        <i class="fas fa-sync-alt text-[10px]" :class="refreshing && 'fa-spin'"></i>
+                        <span x-text="refreshing ? 'Memuat...' : 'Refresh'"></span>
+                    </button>
+                </div>
+                <span class="text-[10px] text-white/60" x-show="lastUpdated">
+                    Terakhir: <span x-text="formatTime()"></span>
+                </span>
+            </div>
+            <div class="hidden md:flex w-32 h-32 rounded-2xl items-center justify-center overflow-hidden bg-transparent">
+                <img src="{{ asset('img/logoadmin.png') }}" alt="Admin" class="w-20 h-20 object-contain">
+            </div>
         </div>
     </div>
 
-    {{-- STAT CARDS (REALTIME) --}}
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+    {{-- Loading overlay for initial load --}}
+    <template x-if="loading">
+        <div class="py-12 text-center text-gray-400">
+            <i class="fas fa-spinner fa-spin text-3xl mb-3 text-orange-400"></i>
+            <p class="text-sm">Memuat data dashboard...</p>
+        </div>
+    </template>
+
+    {{-- Error state --}}
+    <template x-if="!loading && error">
+        <div class="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3 flex items-center gap-2">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>Gagal memuat data. Silakan klik <strong>Refresh</strong> untuk mencoba lagi.</span>
+        </div>
+    </template>
+
+    {{-- Cached data notice --}}
+    <div x-show="!loading && dataCached" x-transition class="bg-amber-50 border border-amber-200 text-amber-700 text-xs rounded-xl px-4 py-2.5 flex items-center gap-2">
+        <i class="fas fa-database"></i>
+        <span>Menampilkan data tersimpan dari database. MikroTik tidak dapat dihubungi saat ini.</span>
+        <button @click="fetchAll(true)" class="ml-auto text-amber-600 hover:text-amber-800 font-semibold underline text-xs">Coba lagi</button>
+    </div>
+
+    {{-- STAT CARDS --}}
+    <div x-show="!loading" class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {{-- Total User --}}
         <div class="rounded-2xl p-4 md:p-5 bg-white text-gray-800 shadow-sm border border-gray-100">
             <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold">Total User</p>
@@ -142,27 +240,18 @@
     </div>
 
     {{-- THREE COLUMN: PROFILES + ACTIVE USERS + BANDWIDTH --}}
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-5">
+    <div x-show="!loading" class="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-5">
 
-        {{-- PROFILE HOTSPOT (REALTIME) --}}
+        {{-- PROFILE HOTSPOT --}}
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div class="px-4 md:px-5 py-3 md:py-4 border-b border-gray-100 flex items-center justify-between">
                 <h3 class="text-sm font-semibold text-gray-800 flex items-center gap-2">
                     <i class="fas fa-layer-group text-amber-500"></i> Profile
-                    <span class="inline-flex items-center gap-1 text-[10px] text-green-500 font-normal">
-                        <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Live
-                    </span>
                 </h3>
                 <span class="text-xs text-gray-400" x-text="profiles.length"></span>
             </div>
             <div class="divide-y divide-gray-50 max-h-52 sm:max-h-72 overflow-y-auto">
-                <template x-if="profilesLoading">
-                    <div class="px-5 py-8 text-center text-gray-400 text-sm">
-                        <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
-                        <p>Memuat profile...</p>
-                    </div>
-                </template>
-                <template x-if="!profilesLoading && profiles.length === 0">
+                <template x-if="profiles.length === 0">
                     <div class="px-5 py-8 text-center text-gray-400 text-sm">
                         <i class="fas fa-inbox text-2xl mb-2"></i>
                         <p>Belum ada profile</p>
@@ -190,28 +279,18 @@
             </div>
         </div>
 
-        {{-- USER AKTIF / MENGGUNAKAN JARINGAN (REALTIME) --}}
+        {{-- USER AKTIF / MENGGUNAKAN JARINGAN --}}
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div class="px-4 md:px-5 py-3 md:py-4 border-b border-gray-100 flex items-center justify-between">
                 <h3 class="text-sm font-semibold text-gray-800 flex items-center gap-2">
                     <i class="fas fa-wifi text-green-500"></i> Sedang Menggunakan Jaringan
-                    <span class="inline-flex items-center gap-1 text-[10px] text-green-500 font-normal">
-                        <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Live
-                    </span>
                 </h3>
                 <span class="inline-flex items-center gap-1.5 text-xs text-green-600 bg-green-50 px-2.5 py-1 rounded-full">
-                    <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
                     <span x-text="actives.length"></span>
                 </span>
             </div>
             <div class="divide-y divide-gray-50 max-h-52 sm:max-h-72 overflow-y-auto">
-                <template x-if="activesLoading">
-                    <div class="px-5 py-8 text-center text-gray-400 text-sm">
-                        <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
-                        <p>Memuat user aktif...</p>
-                    </div>
-                </template>
-                <template x-if="!activesLoading && actives.length === 0">
+                <template x-if="actives.length === 0">
                     <div class="px-5 py-8 text-center text-gray-400 text-sm">
                         <i class="fas fa-wifi text-2xl mb-2 opacity-30"></i>
                         <p>Tidak ada user menggunakan jaringan</p>
@@ -238,32 +317,49 @@
             </div>
         </div>
 
-        {{-- BANDWIDTH MONITORING (REALTIME) --}}
+        {{-- BANDWIDTH MONITORING --}}
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
              x-data="{
                 queues: [], bwLoading: true, bwError: false,
+                _lastBwJson: '',
+                _bwTimer: null,
+                _bwFetching: false,
+                bwIntervalSec: 15,
                 formatBytes(bytes) {
                     if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + 'M';
                     if (bytes >= 1024) return (bytes / 1024).toFixed(0) + 'K';
                     return bytes + 'b';
                 },
                 async fetchBandwidth() {
+                    if (this._bwFetching) return;
+                    this._bwFetching = true;
                     try {
                         const res = await fetch('{{ route('api.bandwidth') }}');
                         if (!res.ok) throw new Error();
-                        this.queues = await res.json();
+                        const data = await res.json();
+                        const json = JSON.stringify(data);
+                        if (json !== this._lastBwJson) {
+                            this.queues = data;
+                            this._lastBwJson = json;
+                        }
                         this.bwError = false;
                     } catch (e) { this.bwError = true; }
-                    finally { this.bwLoading = false; }
+                    finally { this.bwLoading = false; this._bwFetching = false; }
+                },
+                startBwAutoRefresh() {
+                    this.stopBwAutoRefresh();
+                    this._bwTimer = setInterval(() => this.fetchBandwidth(), this.bwIntervalSec * 1000);
+                },
+                stopBwAutoRefresh() {
+                    if (this._bwTimer) { clearInterval(this._bwTimer); this._bwTimer = null; }
                 }
              }"
-             x-init="fetchBandwidth(); setInterval(() => fetchBandwidth(), 5000)">
+             x-init="await fetchBandwidth(); startBwAutoRefresh()"
+             @dashboard-refresh.window="fetchBandwidth()"
+             @beforeunload.window="stopBwAutoRefresh()">
             <div class="px-4 md:px-5 py-3 md:py-4 border-b border-gray-100 flex items-center justify-between">
                 <h3 class="text-sm font-semibold text-gray-800 flex items-center gap-2">
                     <i class="fas fa-tachometer-alt text-orange-500"></i> Bandwidth
-                    <span x-show="!bwLoading" class="inline-flex items-center gap-1 text-[10px] text-green-500 font-normal">
-                        <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Live
-                    </span>
                 </h3>
                 <span class="text-xs text-gray-400" x-text="queues.length + ' queue'"></span>
             </div>
@@ -308,30 +404,47 @@
 
     </div>
 
-    {{-- TWO COLUMN: SYSTEM INFO + REALTIME USER CHART --}}
-    <div class="grid grid-cols-1 lg:grid-cols-5 gap-3 md:gap-5">
+    {{-- TWO COLUMN: SYSTEM INFO + USER CHART --}}
+    <div x-show="!loading" class="grid grid-cols-1 lg:grid-cols-5 gap-3 md:gap-5">
 
-        {{-- SYSTEM INFO (REALTIME) --}}
+        {{-- SYSTEM INFO --}}
         <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
              x-data="{
                 info: null, sysLoading: true, sysError: false,
+                _lastSysJson: '',
+                _sysTimer: null,
+                _sysFetching: false,
+                sysIntervalSec: 25,
                 async fetchInfo() {
+                    if (this._sysFetching) return;
+                    this._sysFetching = true;
                     try {
                         const res = await fetch('{{ route('api.systemInfo') }}');
                         if (!res.ok) throw new Error();
-                        this.info = await res.json();
+                        const data = await res.json();
+                        const json = JSON.stringify(data);
+                        if (json !== this._lastSysJson) {
+                            this.info = data;
+                            this._lastSysJson = json;
+                        }
                         this.sysError = false;
                     } catch (e) { this.sysError = true; }
-                    finally { this.sysLoading = false; }
+                    finally { this.sysLoading = false; this._sysFetching = false; }
+                },
+                startSysAutoRefresh() {
+                    this.stopSysAutoRefresh();
+                    this._sysTimer = setInterval(() => this.fetchInfo(), this.sysIntervalSec * 1000);
+                },
+                stopSysAutoRefresh() {
+                    if (this._sysTimer) { clearInterval(this._sysTimer); this._sysTimer = null; }
                 }
              }"
-             x-init="fetchInfo(); setInterval(() => fetchInfo(), 10000)">
+             x-init="await fetchInfo(); startSysAutoRefresh()"
+             @dashboard-refresh.window="fetchInfo()"
+             @beforeunload.window="stopSysAutoRefresh()">>
             <div class="px-4 md:px-5 py-3 md:py-4 border-b border-gray-100 flex items-center justify-between">
                 <h3 class="text-sm font-semibold text-gray-800 flex items-center gap-2">
                     <i class="fas fa-server text-orange-500"></i> Sistem MikroTik
-                    <span x-show="!sysLoading && !sysError" class="inline-flex items-center gap-1 text-[10px] text-green-500 font-normal">
-                        <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Live
-                    </span>
                 </h3>
             </div>
             <div class="p-3 md:p-5">
@@ -397,14 +510,11 @@
             </div>
         </div>
 
-        {{-- REALTIME USER CHART --}}
+        {{-- USER CHART --}}
         <div class="lg:col-span-3 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div class="px-4 md:px-5 py-3 md:py-4 border-b border-gray-100 flex items-center justify-between">
                 <h3 class="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                    <i class="fas fa-chart-area text-green-500"></i> Grafik Pengguna Realtime
-                    <span x-show="!chartLoading" class="inline-flex items-center gap-1 text-[10px] text-green-500 font-normal">
-                        <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Live
-                    </span>
+                    <i class="fas fa-chart-area text-green-500"></i> Grafik Pengguna
                 </h3>
                 <div class="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-[11px] flex-wrap">
                     <span class="inline-flex items-center gap-1 bg-green-50 text-green-600 px-1.5 sm:px-2 py-0.5 rounded-full font-medium">
@@ -422,13 +532,7 @@
                 </div>
             </div>
             <div class="p-3 md:p-5">
-                <template x-if="chartLoading">
-                    <div class="py-12 text-center text-gray-400 text-sm">
-                        <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
-                        <p>Memuat grafik...</p>
-                    </div>
-                </template>
-                <div x-show="!chartLoading" class="h-[200px] sm:h-[280px]">
+                <div class="h-[200px] sm:h-[280px]">
                     <canvas id="userChart"></canvas>
                 </div>
             </div>

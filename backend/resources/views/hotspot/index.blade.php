@@ -2,7 +2,7 @@
 
 @section('page-title', 'Kelola User')
 
-<div class="space-y-4 md:space-y-5" x-data='hotspotUsersTable(@json($users))' x-init="start()">
+<div class="space-y-4 md:space-y-5" x-data="hotspotUsersTable()" x-init="start()">
 
     {{-- HEADER --}}
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
@@ -52,9 +52,9 @@
                     <i class="fas fa-layer-group absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
                     <select name="profile" class="w-full pl-8 pr-2 py-2 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition appearance-none bg-white" required>
                         <option value="">Pilih Profile</option>
-                        @foreach($profiles as $profile)
-                            <option value="{{ $profile['name'] }}">{{ $profile['name'] }}</option>
-                        @endforeach
+                        <template x-for="profile in profiles" :key="profile.name">
+                            <option :value="profile.name" x-text="profile.name"></option>
+                        </template>
                     </select>
                 </div>
                 <button type="submit" class="bg-gradient-to-r from-[#FF8C00] to-[#E65100] text-white text-xs font-semibold rounded-lg hover:shadow-md transition flex items-center justify-center gap-1.5 py-2">
@@ -127,9 +127,9 @@
                 </select>
                 <select x-model="profileFilter" class="text-[11px] border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-orange-300 bg-white flex-shrink-0">
                     <option value="all">Semua Profile</option>
-                    @foreach($profiles as $p)
-                        <option value="{{ strtolower($p['name']) }}">{{ $p['name'] }}</option>
-                    @endforeach
+                    <template x-for="p in profiles" :key="p.name">
+                        <option :value="p.name.toLowerCase()" x-text="p.name"></option>
+                    </template>
                 </select>
                 <div class="relative flex-1 min-w-0">
                     <i class="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-[10px]"></i>
@@ -269,7 +269,13 @@
             </template>
         </div>
 
-        <div class="py-8 text-center text-gray-400" x-show="users.length === 0">
+        {{-- Loading indicator --}}
+        <div class="py-8 text-center text-gray-400" x-show="loading">
+            <i class="fas fa-spinner fa-spin text-2xl mb-2 text-orange-400"></i>
+            <p class="text-xs">Memuat data user...</p>
+        </div>
+
+        <div class="py-8 text-center text-gray-400" x-show="!loading && users.length === 0">
             <i class="fas fa-user-slash text-2xl mb-2"></i>
             <p class="text-xs">Belum ada user hotspot terdaftar</p>
         </div>

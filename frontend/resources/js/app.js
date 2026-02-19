@@ -4,16 +4,21 @@ import Alpine from 'alpinejs';
 
 window.Alpine = Alpine;
 
-Alpine.data('hotspotUsersTable', (initialUsers = []) => ({
-	users: Array.isArray(initialUsers) ? initialUsers : [],
+Alpine.data('hotspotUsersTable', () => ({
+	users: [],
+	profiles: [],
 	search: '',
 	filter: 'all',
 	profileFilter: 'all',
 	selected: [],
-	refreshTimer: null,
+	loading: true,
 	start() {
-		this.refreshUsers();
-		this.refreshTimer = setInterval(() => this.refreshUsers(), 5000);
+		this.loadInitialData();
+	},
+	async loadInitialData() {
+		this.loading = true;
+		await Promise.all([this.refreshUsers(), this.refreshProfiles()]);
+		this.loading = false;
 	},
 	async refreshUsers() {
 		try {
@@ -26,6 +31,16 @@ Alpine.data('hotspotUsersTable', (initialUsers = []) => ({
 			}
 		} catch (error) {
 			// Silent fail to avoid breaking UI when API is temporarily unavailable.
+		}
+	},
+	async refreshProfiles() {
+		try {
+			const response = await window.axios.get('/api/profiles');
+			if (Array.isArray(response.data)) {
+				this.profiles = response.data;
+			}
+		} catch (error) {
+			// Silent fail
 		}
 	},
 	toggleSelect(id) {

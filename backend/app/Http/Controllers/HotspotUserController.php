@@ -6,6 +6,7 @@ use App\Http\Requests\StoreHotspotUserRequest;
 use App\Http\Requests\BulkDeleteRequest;
 use App\Http\Requests\ResetHotspotPasswordRequest;
 use App\Services\MikrotikService;
+use App\Services\MikrotikCacheService;
 use Illuminate\Http\Request;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
@@ -13,26 +14,21 @@ class HotspotUserController extends Controller
 {
     /**
      * Tampilkan semua user hotspot
+     * Data users & profiles di-load via JSON API agar halaman lebih ringan
      */
-    public function index(MikrotikService $mt)
+    public function index()
     {
-        try {
-            $users    = $mt->getHotspotUsers();
-            $profiles = $mt->getProfiles();
-        } catch (\Exception $e) {
-            return back()->with('error', 'Gagal mengambil data MikroTik: ' . $e->getMessage());
-        }
-
-        return view('hotspot.index', compact('users', 'profiles'));
+        return view('hotspot.index');
     }
 
     /**
      * Tambah user hotspot
      */
-    public function store(StoreHotspotUserRequest $request, MikrotikService $mt)
+    public function store(StoreHotspotUserRequest $request, MikrotikService $mt, MikrotikCacheService $cache)
     {
         try {
             $mt->addHotspotUser($request->validated());
+            $cache->invalidateUserCaches();
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal menambah user hotspot: ' . $e->getMessage());
         }
@@ -43,7 +39,7 @@ class HotspotUserController extends Controller
     /**
      * Upload user hotspot dari file XLSX
      */
-    public function uploadXlsx(Request $request, MikrotikService $mt)
+    public function uploadXlsx(Request $request, MikrotikService $mt, MikrotikCacheService $cache)
     {
         $request->validate([
             'file' => 'required|file|mimes:xlsx',
@@ -126,6 +122,11 @@ class HotspotUserController extends Controller
 
         $successMessage = 'Upload selesai. Berhasil: ' . $successCount . ' user.';
 
+        // Invalidate user caches setelah upload
+        if ($successCount > 0) {
+            $cache->invalidateUserCaches();
+        }
+
         if (!empty($errors)) {
             $preview = array_slice($errors, 0, 5);
             $suffix = count($errors) > 5 ? ' ...' : '';
@@ -140,10 +141,11 @@ class HotspotUserController extends Controller
     /**
      * Hapus user hotspot
      */
-    public function destroy(string $id, MikrotikService $mt)
+    public function destroy(string $id, MikrotikService $mt, MikrotikCacheService $cache)
     {
         try {
             $mt->deleteHotspotUser($id);
+            $cache->invalidateUserCaches();
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal menghapus user hotspot: ' . $e->getMessage());
         }
@@ -154,7 +156,7 @@ class HotspotUserController extends Controller
     /**
      * Hapus banyak user hotspot sekaligus
      */
-    public function bulkDestroy(BulkDeleteRequest $request, MikrotikService $mt)
+    public function bulkDestroy(BulkDeleteRequest $request, MikrotikService $mt, MikrotikCacheService $cache)
     {
         $success = 0;
         $failed  = 0;
@@ -168,6 +170,10 @@ class HotspotUserController extends Controller
             }
         }
 
+        if ($success > 0) {
+            $cache->invalidateUserCaches();
+        }
+
         $msg = "{$success} user berhasil dihapus";
         if ($failed > 0) {
             $msg .= ", {$failed} gagal dihapus";
@@ -179,10 +185,11 @@ class HotspotUserController extends Controller
     /**
      * Reset password user hotspot
      */
-    public function resetPassword(ResetHotspotPasswordRequest $request, string $id, MikrotikService $mt)
+    public function resetPassword(ResetHotspotPasswordRequest $request, string $id, MikrotikService $mt, MikrotikCacheService $cache)
     {
         try {
             $mt->resetPassword($id, $request->validated()['password']);
+            $cache->invalidateUserCaches();
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal reset password: ' . $e->getMessage());
         }
@@ -193,19 +200,15 @@ class HotspotUserController extends Controller
     /**
      * Disable user hotspot + kick dari jaringan
      */
-    public function disable(string $id, MikrotikService $mt)
+    public function disable(string $id, MikrotikService $mt, MikrotikCacheService $cache)
     {
         try {
-            // Ambil username dulu sebelum disable
             $username = $mt->getUsernameById($id);
-
-            // Disable user
             $mt->disableUser($id);
-
-            // Kick dari active session agar langsung terputus
             if ($username) {
                 $mt->kickActiveUser($username);
             }
+            $cache->invalidateUserCaches();
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal disable user: ' . $e->getMessage());
         }
@@ -216,10 +219,11 @@ class HotspotUserController extends Controller
     /**
      * Enable user hotspot
      */
-    public function enable(string $id, MikrotikService $mt)
+    public function enable(string $id, MikrotikService $mt, MikrotikCacheService $cache)
     {
         try {
             $mt->enableUser($id);
+            $cache->invalidateUserCaches();
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal enable user: ' . $e->getMessage());
         }
@@ -244,10 +248,11 @@ class HotspotUserController extends Controller
     /**
      * Hapus profile hotspot
      */
-    public function destroyProfile(string $id, MikrotikService $mt)
+    public function destroyProfile(string $id, MikrotikService $mt, MikrotikCacheService $cache)
     {
         try {
             $mt->deleteProfile($id);
+            $cache->invalidate('profiles', 'user_stats');
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal menghapus profile: ' . $e->getMessage());
         }

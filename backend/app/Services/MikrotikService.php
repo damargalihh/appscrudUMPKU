@@ -7,17 +7,51 @@ use RouterOS\Query;
 
 class MikrotikService
 {
-    protected Client $client;
+    protected ?Client $client = null;
+    protected bool $connectionFailed = false;
+    protected ?string $lastError = null;
 
-    public function __construct()
+    /**
+     * Lazy connection — koneksi baru dibuat saat pertama kali dipanggil.
+     * Supaya error bisa ditangkap oleh try-catch di controller.
+     */
+    protected function client(): Client
     {
-        $this->client = new Client([
-            'host'    => config('mikrotik.host'),
-            'user'    => config('mikrotik.user'),
-            'pass'    => config('mikrotik.pass'),
-            'port'    => (int) config('mikrotik.port'),
-            'timeout' => 3,
-        ]);
+        if ($this->client !== null) {
+            return $this->client;
+        }
+
+        if ($this->connectionFailed) {
+            throw new \RuntimeException('MikroTik connection failed: ' . ($this->lastError ?? 'Unknown error'));
+        }
+
+        $attempts = (int) config('mikrotik.attempts', 2);
+        $timeout  = (int) config('mikrotik.timeout', 15);
+        $lastException = null;
+
+        for ($i = 0; $i < $attempts; $i++) {
+            try {
+                $this->client = new Client([
+                    'host'    => config('mikrotik.host'),
+                    'user'    => config('mikrotik.user'),
+                    'pass'    => config('mikrotik.pass'),
+                    'port'    => (int) config('mikrotik.port'),
+                    'timeout' => $timeout,
+                ]);
+
+                return $this->client;
+            } catch (\Exception $e) {
+                $lastException = $e;
+                // Tunggu sebentar sebelum retry
+                if ($i < $attempts - 1) {
+                    usleep(500000); // 0.5 detik
+                }
+            }
+        }
+
+        $this->connectionFailed = true;
+        $this->lastError = $lastException?->getMessage() ?? 'Unknown error';
+        throw $lastException;
     }
 
     /**
@@ -25,7 +59,7 @@ class MikrotikService
      */
     public function test()
     {
-        return $this->client->query(
+        return $this->client()->query(
             new Query('/system/resource/print')
         )->read();
     }
@@ -35,7 +69,7 @@ class MikrotikService
      */
     public function getHotspotUsers()
     {
-        return $this->client->query(
+        return $this->client()->query(
             new Query('/ip/hotspot/user/print')
         )->read();
     }
@@ -54,7 +88,7 @@ class MikrotikService
             $query->equal('comment', $data['comment']);
         }
 
-        return $this->client->query($query)->read();
+        return $this->client()->query($query)->read();
     }
 
     /**
@@ -62,7 +96,7 @@ class MikrotikService
      */
     public function deleteHotspotUser(string $id)
     {
-        return $this->client->query(
+        return $this->client()->query(
             (new Query('/ip/hotspot/user/remove'))
                 ->equal('.id', $id)
         )->read();
@@ -73,7 +107,7 @@ class MikrotikService
      */
     public function getProfiles()
     {
-        return $this->client->query(
+        return $this->client()->query(
             new Query('/ip/hotspot/user/profile/print')
         )->read();
     }
@@ -83,7 +117,7 @@ class MikrotikService
      */
     public function resetPassword(string $id, string $newPassword)
     {
-        return $this->client->query(
+        return $this->client()->query(
             (new Query('/ip/hotspot/user/set'))
                 ->equal('.id', $id)
                 ->equal('password', $newPassword)
@@ -95,7 +129,7 @@ class MikrotikService
      */
     public function disableUser(string $id)
     {
-        return $this->client->query(
+        return $this->client()->query(
             (new Query('/ip/hotspot/user/set'))
                 ->equal('.id', $id)
                 ->equal('disabled', 'yes')
@@ -108,7 +142,7 @@ class MikrotikService
     public function kickActiveUser(string $username)
     {
         // Cari semua active session milik username ini
-        $actives = $this->client->query(
+        $actives = $this->client()->query(
             (new Query('/ip/hotspot/active/print'))
                 ->where('user', $username)
         )->read();
@@ -116,7 +150,7 @@ class MikrotikService
         // Remove setiap active session
         foreach ($actives as $session) {
             if (isset($session['.id'])) {
-                $this->client->query(
+                $this->client()->query(
                     (new Query('/ip/hotspot/active/remove'))
                         ->equal('.id', $session['.id'])
                 )->read();
@@ -131,7 +165,7 @@ class MikrotikService
      */
     public function getUsernameById(string $id)
     {
-        $result = $this->client->query(
+        $result = $this->client()->query(
             (new Query('/ip/hotspot/user/print'))
                 ->where('.id', $id)
         )->read();
@@ -144,7 +178,7 @@ class MikrotikService
      */
     public function enableUser(string $id)
     {
-        return $this->client->query(
+        return $this->client()->query(
             (new Query('/ip/hotspot/user/set'))
                 ->equal('.id', $id)
                 ->equal('disabled', 'no')
@@ -156,7 +190,7 @@ class MikrotikService
      */
     public function deleteProfile(string $id)
     {
-        return $this->client->query(
+        return $this->client()->query(
             (new Query('/ip/hotspot/user/profile/remove'))
                 ->equal('.id', $id)
         )->read();
@@ -167,7 +201,7 @@ class MikrotikService
      */
     public function getActiveUsers()
     {
-        return $this->client->query(
+        return $this->client()->query(
             new Query('/ip/hotspot/active/print')
         )->read();
     }
@@ -177,7 +211,7 @@ class MikrotikService
      */
     public function getQueues()
     {
-        return $this->client->query(
+        return $this->client()->query(
             new Query('/queue/simple/print')
         )->read();
     }
@@ -187,7 +221,7 @@ class MikrotikService
      */
     public function getSystemResource()
     {
-        $result = $this->client->query(
+        $result = $this->client()->query(
             new Query('/system/resource/print')
         )->read();
 
@@ -199,7 +233,7 @@ class MikrotikService
      */
     public function getIdentity()
     {
-        $result = $this->client->query(
+        $result = $this->client()->query(
             new Query('/system/identity/print')
         )->read();
 
