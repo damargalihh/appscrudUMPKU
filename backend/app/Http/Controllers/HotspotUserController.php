@@ -8,7 +8,7 @@ use App\Http\Requests\ResetHotspotPasswordRequest;
 use App\Services\MikrotikService;
 use App\Services\MikrotikCacheService;
 use Illuminate\Http\Request;
-use PhpOffice\PhpSpreadsheet\IOFactory;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class HotspotUserController extends Controller
 {
@@ -37,38 +37,42 @@ class HotspotUserController extends Controller
     }
 
     /**
-     * Upload user hotspot dari file XLSX
+     * Upload user hotspot dari file CSV
      */
-    public function uploadXlsx(Request $request, MikrotikService $mt, MikrotikCacheService $cache)
+    public function uploadCsv(Request $request, MikrotikService $mt, MikrotikCacheService $cache)
     {
         $request->validate([
-            'file' => 'required|file|mimes:xlsx',
+            'file' => 'required|file|mimes:csv,txt|max:2048',
         ]);
 
-        try {
-            $spreadsheet = IOFactory::load($request->file('file')->getRealPath());
-        } catch (\Throwable $e) {
-            return back()->with('error', 'Gagal membaca file XLSX: ' . $e->getMessage());
+        $path = $request->file('file')->getRealPath();
+        $handle = fopen($path, 'r');
+
+        if ($handle === false) {
+            return back()->with('error', 'Gagal membaca file CSV.');
         }
 
-        $rows = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
+        // Baca header baris pertama
+        $header = fgetcsv($handle, 0, ',');
 
-        if (count($rows) < 2) {
-            return back()->with('error', 'File XLSX kosong atau tidak memiliki data.');
+        if ($header === false || empty($header)) {
+            fclose($handle);
+            return back()->with('error', 'File CSV kosong atau tidak memiliki header.');
         }
 
-        $header = array_shift($rows);
+        // Normalisasi header: lowercase, trim, hapus BOM
         $headerMap = [];
-        foreach ($header as $col => $name) {
-            $key = strtolower(trim((string) $name));
+        foreach ($header as $index => $name) {
+            $key = strtolower(trim(preg_replace('/\x{FEFF}/u', '', (string) $name)));
             if ($key !== '') {
-                $headerMap[$key] = $col;
+                $headerMap[$key] = $index;
             }
         }
 
         $requiredColumns = ['username', 'email', 'password', 'profile'];
         $missing = array_diff($requiredColumns, array_keys($headerMap));
         if (!empty($missing)) {
+            fclose($handle);
             return back()->with('error', 'Kolom wajib tidak lengkap: ' . implode(', ', $missing));
         }
 
@@ -76,14 +80,15 @@ class HotspotUserController extends Controller
         $errors = [];
         $rowNumber = 1;
 
-        foreach ($rows as $row) {
+        while (($row = fgetcsv($handle, 0, ',')) !== false) {
             $rowNumber++;
 
             $username = trim((string) ($row[$headerMap['username']] ?? ''));
-            $email = trim((string) ($row[$headerMap['email']] ?? ''));
+            $email    = trim((string) ($row[$headerMap['email']] ?? ''));
             $password = trim((string) ($row[$headerMap['password']] ?? ''));
-            $profile = trim((string) ($row[$headerMap['profile']] ?? ''));
+            $profile  = trim((string) ($row[$headerMap['profile']] ?? ''));
 
+            // Skip baris kosong
             if ($username === '' && $email === '' && $password === '' && $profile === '') {
                 continue;
             }
@@ -109,16 +114,18 @@ class HotspotUserController extends Controller
 
             try {
                 $mt->addHotspotUser([
-                    'name' => $username,
+                    'name'     => $username,
                     'password' => $password,
-                    'profile' => $profile,
-                    'comment' => $email,
+                    'profile'  => $profile,
+                    'comment'  => $email,
                 ]);
                 $successCount++;
             } catch (\Throwable $e) {
                 $errors[] = 'Baris ' . $rowNumber . ': ' . $e->getMessage();
             }
         }
+
+        fclose($handle);
 
         $successMessage = 'Upload selesai. Berhasil: ' . $successCount . ' user.';
 
@@ -136,6 +143,35 @@ class HotspotUserController extends Controller
         }
 
         return back()->with('success', $successMessage);
+    }
+
+    /**
+     * Download template CSV untuk upload user hotspot
+     */
+    public function downloadTemplate(): StreamedResponse
+    {
+        $filename = 'template_hotspot_users.csv';
+
+        return response()->streamDownload(function () {
+            $handle = fopen('php://output', 'w');
+
+            // Tulis BOM agar Excel membaca UTF-8 dengan benar
+            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+            // Header kolom
+            fputcsv($handle, ['username', 'email', 'password', 'profile']);
+
+            // Contoh data
+            fputcsv($handle, ['anakmagang01', 'anakmagang01@example.com', 'pass1234', '@mahasiswa']);
+            fputcsv($handle, ['dosenmagang01', 'dosenmagang01@example.com', 'pass1234', '@dosen']);
+            fputcsv($handle, ['mahasiswamagang01', 'mahasiswamagang01@example.com', 'pass1234', '@mahasiswa']);
+            fputcsv($handle, ['staffmagang01', 'staffmagang01@example.com', 'pass1234', '@staff']);
+            fputcsv($handle, ['tamumagang01', 'tamumagang01@example.com', 'pass1234', 'IT']);
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
     }
 
     /**

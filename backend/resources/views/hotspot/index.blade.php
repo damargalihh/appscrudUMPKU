@@ -64,21 +64,24 @@
         </form>
     </div>
 
-    {{-- UPLOAD XLSX --}}
+    {{-- UPLOAD CSV --}}
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-3 md:p-5">
         <h3 class="text-xs md:text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-            <i class="fas fa-file-excel text-green-600"></i> Upload dari XLSX
+            <i class="fas fa-file-csv text-green-600"></i> Upload dari CSV
         </h3>
         <form method="POST" action="{{ route('hotspot.upload') }}" enctype="multipart/form-data">
             @csrf
             <div class="flex flex-col sm:flex-row gap-2 sm:items-center">
-                <input type="file" name="file" accept=".xlsx"
+                <input type="file" name="file" accept=".csv"
                        class="w-full sm:w-auto text-xs border border-gray-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-green-200 focus:border-green-400" required>
                 <button type="submit" class="bg-gradient-to-r from-green-600 to-emerald-600 text-white text-xs font-semibold rounded-lg hover:shadow-md transition flex items-center justify-center gap-1.5 px-4 py-2">
                     <i class="fas fa-upload text-[10px]"></i> Upload
                 </button>
+                <a href="{{ route('hotspot.downloadTemplate') }}" class="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-semibold rounded-lg hover:shadow-md transition flex items-center justify-center gap-1.5 px-4 py-2">
+                    <i class="fas fa-download text-[10px]"></i> Download Template
+                </a>
             </div>
-            <p class="text-[10px] text-gray-400 mt-1.5">Kolom: username, email, password, profile (header di baris 1).</p>
+            <p class="text-[10px] text-gray-400 mt-1.5">Format CSV: username, email, password, profile (header di baris 1).</p>
         </form>
     </div>
 

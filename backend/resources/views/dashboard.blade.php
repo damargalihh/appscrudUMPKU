@@ -266,14 +266,6 @@
                                 <p class="text-[11px] text-gray-400">Rate: <span x-text="p.rateLimit"></span></p>
                             </div>
                         </div>
-                        <form method="POST" :action="'/hotspot-profiles/' + p.id"
-                              onsubmit="return confirm('Yakin hapus profile ini?')">
-                            @csrf
-                            @method('DELETE')
-                            <button class="opacity-0 group-hover:opacity-100 text-xs text-red-400 hover:text-red-600 transition-all px-2 py-1 rounded hover:bg-red-50">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                        </form>
                     </div>
                 </template>
             </div>

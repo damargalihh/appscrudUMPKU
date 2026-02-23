@@ -1,0 +1,11 @@
+username,email,password,profile
+anakmagang01,anakmagang01@example.com,pass1234,@mahasiswa
+dosenmagang01,dosenmagang01@example.com,pass1234,@dosen
+mahasiswamagang01,mahasiswamagang01@example.com,pass1234,@mahasiswa
+staffmagang01,staffmagang01@example.com,pass1234,@staff
+tamumagang01,tamumagang01@example.com,pass1234,IT
+anakmagang02,anakmagang02@example.com,pass1234,@mahasiswa
+dosenmagang02,dosenmagang02@example.com,pass1234,@dosen
+mahasiswamagang02,mahasiswamagang02@example.com,pass1234,@mahasiswa
+staffmagang02,staffmagang02@example.com,pass1234,@staff
+tamumagang02,tamumagang02@example.com,pass1234,IT

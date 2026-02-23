@@ -34,7 +34,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix('hotspot-users')->name('hotspot.')->group(function () {
         Route::get('/', [HotspotUserController::class, 'index'])->name('index');
         Route::post('/', [HotspotUserController::class, 'store'])->name('store');
-        Route::post('/upload', [HotspotUserController::class, 'uploadXlsx'])->name('upload');
+        Route::post('/upload', [HotspotUserController::class, 'uploadCsv'])->name('upload');
+        Route::get('/download-template', [HotspotUserController::class, 'downloadTemplate'])->name('downloadTemplate');
         Route::post('/bulk-delete', [HotspotUserController::class, 'bulkDestroy'])->name('bulkDestroy');
         Route::delete('/{id}', [HotspotUserController::class, 'destroy'])->name('destroy');
         Route::post('/{id}/reset-password', [HotspotUserController::class, 'resetPassword'])->name('resetPassword');
