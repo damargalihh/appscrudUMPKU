@@ -433,7 +433,7 @@
              }"
              x-init="await fetchInfo(); startSysAutoRefresh()"
              @dashboard-refresh.window="fetchInfo()"
-             @beforeunload.window="stopSysAutoRefresh()">>
+             @beforeunload.window="stopSysAutoRefresh()">
             <div class="px-4 md:px-5 py-3 md:py-4 border-b border-gray-100 flex items-center justify-between">
                 <h3 class="text-sm font-semibold text-gray-800 flex items-center gap-2">
                     <i class="fas fa-server text-orange-500"></i> Sistem MikroTik

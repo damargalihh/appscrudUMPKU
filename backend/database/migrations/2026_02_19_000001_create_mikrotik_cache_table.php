@@ -14,8 +14,6 @@ return new class extends Migration
             $table->longText('data');               // JSON encoded data
             $table->timestamp('fetched_at');        // when data was fetched from MikroTik
             $table->timestamps();
-
-            $table->index('key');
         });
     }
 

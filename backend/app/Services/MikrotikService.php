@@ -55,6 +55,21 @@ class MikrotikService
     }
 
     /**
+     * Cek response dari RouterOS API — jika ada !trap, lempar exception.
+     */
+    protected function checkResponse(array $response): array
+    {
+        foreach ($response as $item) {
+            if (isset($item['!trap'])) {
+                $message = $item['message'] ?? 'Unknown MikroTik error';
+                throw new \RuntimeException($message);
+            }
+        }
+
+        return $response;
+    }
+
+    /**
      * TEST KONEKSI
      */
     public function test()
@@ -88,7 +103,9 @@ class MikrotikService
             $query->equal('comment', $data['comment']);
         }
 
-        return $this->client()->query($query)->read();
+        $response = $this->client()->query($query)->read();
+
+        return $this->checkResponse($response);
     }
 
     /**
@@ -96,10 +113,12 @@ class MikrotikService
      */
     public function deleteHotspotUser(string $id)
     {
-        return $this->client()->query(
+        $response = $this->client()->query(
             (new Query('/ip/hotspot/user/remove'))
                 ->equal('.id', $id)
         )->read();
+
+        return $this->checkResponse($response);
     }
 
     /**
@@ -113,15 +132,27 @@ class MikrotikService
     }
 
     /**
+     * AMBIL DAFTAR NAMA PROFILE YANG VALID
+     */
+    public function getProfileNames(): array
+    {
+        $profiles = $this->getProfiles();
+
+        return collect($profiles)->pluck('name')->filter()->values()->all();
+    }
+
+    /**
      * RESET PASSWORD USER
      */
     public function resetPassword(string $id, string $newPassword)
     {
-        return $this->client()->query(
+        $response = $this->client()->query(
             (new Query('/ip/hotspot/user/set'))
                 ->equal('.id', $id)
                 ->equal('password', $newPassword)
         )->read();
+
+        return $this->checkResponse($response);
     }
 
     /**
@@ -129,11 +160,13 @@ class MikrotikService
      */
     public function disableUser(string $id)
     {
-        return $this->client()->query(
+        $response = $this->client()->query(
             (new Query('/ip/hotspot/user/set'))
                 ->equal('.id', $id)
                 ->equal('disabled', 'yes')
         )->read();
+
+        return $this->checkResponse($response);
     }
 
     /**
@@ -178,11 +211,13 @@ class MikrotikService
      */
     public function enableUser(string $id)
     {
-        return $this->client()->query(
+        $response = $this->client()->query(
             (new Query('/ip/hotspot/user/set'))
                 ->equal('.id', $id)
                 ->equal('disabled', 'no')
         )->read();
+
+        return $this->checkResponse($response);
     }
 
     /**
@@ -190,10 +225,12 @@ class MikrotikService
      */
     public function deleteProfile(string $id)
     {
-        return $this->client()->query(
+        $response = $this->client()->query(
             (new Query('/ip/hotspot/user/profile/remove'))
                 ->equal('.id', $id)
         )->read();
+
+        return $this->checkResponse($response);
     }
 
     /**

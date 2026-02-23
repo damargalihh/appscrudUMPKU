@@ -14,9 +14,12 @@ class MikrotikCache extends Model
         'fetched_at',
     ];
 
-    protected $casts = [
-        'fetched_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'fetched_at' => 'datetime',
+        ];
+    }
 
     /**
      * Get decoded JSON data

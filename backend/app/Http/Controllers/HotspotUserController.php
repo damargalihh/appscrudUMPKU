@@ -52,12 +52,36 @@ class HotspotUserController extends Controller
             return back()->with('error', 'Gagal membaca file CSV.');
         }
 
-        // Baca header baris pertama
+        // Baca header baris pertama (coba koma dulu)
         $header = fgetcsv($handle, 0, ',');
 
         if ($header === false || empty($header)) {
             fclose($handle);
             return back()->with('error', 'File CSV kosong atau tidak memiliki header.');
+        }
+
+        // Deteksi delimiter — jika header hanya 1 kolom, coba semicolon atau tab
+        $delimiter = ',';
+        if (count($header) === 1) {
+            rewind($handle);
+            $firstLine = fgets($handle);
+            rewind($handle);
+
+            if ($firstLine !== false) {
+                if (substr_count($firstLine, ';') >= 3) {
+                    $delimiter = ';';
+                } elseif (substr_count($firstLine, "\t") >= 3) {
+                    $delimiter = "\t";
+                }
+            }
+
+            // Baca ulang header dengan delimiter yang terdeteksi
+            $header = fgetcsv($handle, 0, $delimiter);
+
+            if ($header === false || count($header) < 2) {
+                fclose($handle);
+                return back()->with('error', 'Format CSV tidak dikenali. Pastikan menggunakan delimiter koma (,) dan kolom: username, email, password, profile. Download template untuk format yang benar.');
+            }
         }
 
         // Normalisasi header: lowercase, trim, hapus BOM
@@ -73,14 +97,29 @@ class HotspotUserController extends Controller
         $missing = array_diff($requiredColumns, array_keys($headerMap));
         if (!empty($missing)) {
             fclose($handle);
-            return back()->with('error', 'Kolom wajib tidak lengkap: ' . implode(', ', $missing));
+
+            // Berikan pesan yang informatif tentang kolom apa saja yang ditemukan
+            $foundColumns = array_keys($headerMap);
+            $foundInfo = !empty($foundColumns) ? ' Kolom yang ditemukan: ' . implode(', ', $foundColumns) . '.' : '';
+
+            return back()->with('error', 'Kolom wajib tidak lengkap: ' . implode(', ', $missing) . '.' . $foundInfo . ' Pastikan header CSV sesuai template: username, email, password, profile.');
+        }
+
+        // Ambil daftar profile yang valid dari MikroTik
+        $validProfiles = [];
+        try {
+            $validProfiles = $mt->getProfileNames();
+        } catch (\Throwable $e) {
+            // Jika gagal ambil profile, tetap lanjut tanpa validasi profile
         }
 
         $successCount = 0;
+        $skippedCount = 0;
         $errors = [];
         $rowNumber = 1;
+        $invalidProfiles = [];
 
-        while (($row = fgetcsv($handle, 0, ',')) !== false) {
+        while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
             $rowNumber++;
 
             $username = trim((string) ($row[$headerMap['username']] ?? ''));
@@ -90,6 +129,7 @@ class HotspotUserController extends Controller
 
             // Skip baris kosong
             if ($username === '' && $email === '' && $password === '' && $profile === '') {
+                $skippedCount++;
                 continue;
             }
 
@@ -105,6 +145,9 @@ class HotspotUserController extends Controller
             }
             if ($profile === '') {
                 $rowIssues[] = 'profile kosong';
+            } elseif (!empty($validProfiles) && !in_array($profile, $validProfiles, true)) {
+                $rowIssues[] = "profile '{$profile}' tidak ditemukan di MikroTik";
+                $invalidProfiles[$profile] = true;
             }
 
             if (!empty($rowIssues)) {
@@ -127,13 +170,38 @@ class HotspotUserController extends Controller
 
         fclose($handle);
 
-        $successMessage = 'Upload selesai. Berhasil: ' . $successCount . ' user.';
+        $totalDataRows = $rowNumber - 1; // dikurangi header
 
-        // Invalidate user caches setelah upload
-        if ($successCount > 0) {
-            $cache->invalidateUserCaches();
+        // Tidak ada baris data sama sekali
+        if ($totalDataRows === 0) {
+            return back()->with('error', 'File CSV hanya berisi header tanpa data. Tambahkan baris data di bawah header.');
         }
 
+        // Semua baris kosong (di-skip semua)
+        if ($successCount === 0 && empty($errors) && $skippedCount > 0) {
+            return back()->with('error', 'Semua baris data kosong. Pastikan file CSV berisi data yang valid.');
+        }
+
+        // Tidak ada yang berhasil sama sekali
+        if ($successCount === 0) {
+            $preview = array_slice($errors, 0, 5);
+            $suffix = count($errors) > 5 ? ' (dan ' . (count($errors) - 5) . ' error lainnya)' : '';
+            $errorMessage = 'Upload gagal — tidak ada user yang berhasil ditambahkan. ' . count($errors) . ' baris bermasalah: ' . implode(' | ', $preview) . $suffix;
+
+            // Tambahkan info profile yang valid jika ada profile tidak dikenali
+            if (!empty($invalidProfiles) && !empty($validProfiles)) {
+                $errorMessage .= ' | Profile yang tersedia di MikroTik: ' . implode(', ', $validProfiles);
+            }
+
+            return back()->with('error', $errorMessage);
+        }
+
+        // Invalidate user caches setelah upload
+        $cache->invalidateUserCaches();
+
+        $successMessage = 'Upload berhasil! ' . $successCount . ' user ditambahkan.';
+
+        // Sebagian berhasil, sebagian gagal
         if (!empty($errors)) {
             $preview = array_slice($errors, 0, 5);
             $suffix = count($errors) > 5 ? ' ...' : '';
@@ -295,7 +363,7 @@ class HotspotUserController extends Controller
     public function cutoff(string $username, MikrotikService $mt, MikrotikCacheService $cache)
     {
         try {
-            $kicked = $mt->kickActiveUser($username);
+            $mt->kickActiveUser($username);
             $cache->invalidate('active_users', 'user_stats');
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal cut off user: ' . $e->getMessage());
