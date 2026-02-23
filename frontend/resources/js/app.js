@@ -81,4 +81,37 @@ Alpine.data('hotspotUsersTable', () => ({
 	},
 }));
 
+Alpine.data('monitoringUsers', () => ({
+	activeUsers: [],
+	search: '',
+	loading: true,
+	start() {
+		this.loadData();
+	},
+	async loadData() {
+		this.loading = true;
+		await this.refreshActiveUsers();
+		this.loading = false;
+	},
+	async refreshActiveUsers() {
+		try {
+			const response = await window.axios.get('/api/active-users');
+			if (Array.isArray(response.data)) {
+				this.activeUsers = response.data;
+			}
+		} catch (error) {
+			// Silent fail
+		}
+	},
+	filteredActiveUsers() {
+		const q = this.search.toLowerCase().trim();
+		if (!q) return this.activeUsers;
+		return this.activeUsers.filter(au => {
+			const user = (au.user || '').toLowerCase();
+			const addr = (au.address || '').toLowerCase();
+			return user.includes(q) || addr.includes(q);
+		});
+	},
+}));
+
 Alpine.start();

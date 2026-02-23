@@ -282,6 +282,29 @@ class HotspotUserController extends Controller
     }
 
     /**
+     * Monitoring user aktif (halaman terpisah)
+     */
+    public function monitoring()
+    {
+        return view('hotspot.monitoring');
+    }
+
+    /**
+     * Cut off / disconnect active user dari jaringan
+     */
+    public function cutoff(string $username, MikrotikService $mt, MikrotikCacheService $cache)
+    {
+        try {
+            $kicked = $mt->kickActiveUser($username);
+            $cache->invalidate('active_users', 'user_stats');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal cut off user: ' . $e->getMessage());
+        }
+
+        return back()->with('success', "User '{$username}' berhasil di-cut off dari jaringan");
+    }
+
+    /**
      * Hapus profile hotspot
      */
     public function destroyProfile(string $id, MikrotikService $mt, MikrotikCacheService $cache)

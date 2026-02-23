@@ -68,6 +68,7 @@ class MikrotikCacheService
                 ->filter(fn($a) => (intval($a['bytes-in'] ?? 0) + intval($a['bytes-out'] ?? 0)) > 0)
                 ->values()
                 ->map(fn($a) => [
+                    'id'      => $a['.id'] ?? '',
                     'user'    => $a['user'] ?? '-',
                     'address' => $a['address'] ?? '-',
                     'uptime'  => $a['uptime'] ?? '-',

@@ -41,9 +41,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/{id}/reset-password', [HotspotUserController::class, 'resetPassword'])->name('resetPassword');
         Route::post('/{id}/disable', [HotspotUserController::class, 'disable'])->name('disable');
         Route::post('/{id}/enable', [HotspotUserController::class, 'enable'])->name('enable');
+        Route::post('/cutoff/{username}', [HotspotUserController::class, 'cutoff'])->name('cutoff');
     });
 
     Route::get('/hotspot-active', [HotspotUserController::class, 'active'])->name('hotspot.active');
+    Route::get('/monitoring-users', [HotspotUserController::class, 'monitoring'])->name('hotspot.monitoring');
     Route::delete('/hotspot-profiles/{id}', [HotspotUserController::class, 'destroyProfile'])->name('hotspot.destroyProfile');
 
     // API endpoints (JSON) untuk dashboard realtime

@@ -275,7 +275,7 @@
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div class="px-4 md:px-5 py-3 md:py-4 border-b border-gray-100 flex items-center justify-between">
                 <h3 class="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                    <i class="fas fa-wifi text-green-500"></i> Sedang Menggunakan Jaringan
+                    <i class="fas fa-wifi text-green-500"></i> User Aktif
                 </h3>
                 <span class="inline-flex items-center gap-1.5 text-xs text-green-600 bg-green-50 px-2.5 py-1 rounded-full">
                     <span x-text="actives.length"></span>

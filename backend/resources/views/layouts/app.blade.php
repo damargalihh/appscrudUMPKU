@@ -50,7 +50,13 @@
                 <a href="{{ route('hotspot.index') }}" @click="mobileMenu = false"
                    class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 {{ request()->routeIs('hotspot.index') ? 'bg-white/25 text-white shadow-lg' : 'text-white/80 hover:bg-white/15 hover:text-white' }}">
                     <i class="fas fa-users w-5 text-center flex-shrink-0"></i>
-                    <span x-show="sidebarOpen">Kelola User</span>
+                    <span x-show="sidebarOpen">Manajemen User</span>
+                </a>
+
+                <a href="{{ route('hotspot.monitoring') }}" @click="mobileMenu = false"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 {{ request()->routeIs('hotspot.monitoring') ? 'bg-white/25 text-white shadow-lg' : 'text-white/80 hover:bg-white/15 hover:text-white' }}">
+                    <i class="fas fa-wifi w-5 text-center flex-shrink-0"></i>
+                    <span x-show="sidebarOpen">Monitoring User</span>
                 </a>
 
                 <a href="{{ route('profile.edit') }}" @click="mobileMenu = false"
