@@ -358,18 +358,19 @@ class HotspotUserController extends Controller
     }
 
     /**
-     * Cut off / disconnect active user dari jaringan
+     * Cut off / disconnect satu active session dari jaringan (berdasarkan session ID).
+     * Hanya memutus koneksi IP/device tertentu, bukan seluruh user.
      */
-    public function cutoff(string $username, MikrotikService $mt, MikrotikCacheService $cache)
+    public function cutoff(string $sessionId, MikrotikService $mt, MikrotikCacheService $cache)
     {
         try {
-            $mt->kickActiveUser($username);
+            $mt->kickActiveSession($sessionId);
             $cache->invalidate('active_users', 'user_stats');
         } catch (\Exception $e) {
-            return back()->with('error', 'Gagal cut off user: ' . $e->getMessage());
+            return back()->with('error', 'Gagal cut off session: ' . $e->getMessage());
         }
 
-        return back()->with('success', "User '{$username}' berhasil di-cut off dari jaringan");
+        return back()->with('success', 'Session berhasil di-cut off dari jaringan');
     }
 
     /**

@@ -248,7 +248,7 @@
                                 <span class="text-xs text-orange-600 font-medium"><i class="fas fa-arrow-up text-[9px]"></i> <span x-text="au.tx"></span></span>
                             </td>
                             <td class="px-4 py-2.5">
-                                <form method="POST" :action="`/hotspot-users/cutoff/${au.user}`" onsubmit="return confirm('Yakin cut off user ini dari jaringan?')">
+                                <form method="POST" :action="`/hotspot-users/cutoff/${au.id}`" onsubmit="return confirm('Yakin cut off session ini dari jaringan?')">
                                     <input type="hidden" name="_token" value="{{ csrf_token() }}">
                                     <button class="text-[11px] font-medium px-2.5 py-1 rounded-md text-red-600 bg-red-50 hover:bg-red-100 transition flex items-center gap-1">
                                         <i class="fas fa-plug-circle-xmark text-[10px]"></i> Cut Off
@@ -282,7 +282,7 @@
                                 </div>
                             </div>
                         </div>
-                        <form method="POST" :action="`/hotspot-users/cutoff/${au.user}`" onsubmit="return confirm('Yakin cut off user ini?')">
+                        <form method="POST" :action="`/hotspot-users/cutoff/${au.id}`" onsubmit="return confirm('Yakin cut off session ini?')">
                             <input type="hidden" name="_token" value="{{ csrf_token() }}">
                             <button class="text-[10px] font-medium px-2.5 py-1.5 rounded-md text-red-600 bg-red-50 active:bg-red-100 transition flex items-center gap-1 flex-shrink-0">
                                 <i class="fas fa-plug-circle-xmark text-[9px]"></i> Cut Off

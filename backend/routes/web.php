@@ -41,7 +41,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/{id}/reset-password', [HotspotUserController::class, 'resetPassword'])->name('resetPassword');
         Route::post('/{id}/disable', [HotspotUserController::class, 'disable'])->name('disable');
         Route::post('/{id}/enable', [HotspotUserController::class, 'enable'])->name('enable');
-        Route::post('/cutoff/{username}', [HotspotUserController::class, 'cutoff'])->name('cutoff');
+        Route::post('/cutoff/{sessionId}', [HotspotUserController::class, 'cutoff'])->name('cutoff');
     });
 
     Route::get('/hotspot-active', [HotspotUserController::class, 'active'])->name('hotspot.active');

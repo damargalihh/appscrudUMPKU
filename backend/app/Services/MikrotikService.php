@@ -171,6 +171,7 @@ class MikrotikService
 
     /**
      * KICK USER DARI ACTIVE SESSION (disconnect langsung)
+     * Menghapus SEMUA active session, cookie, dan host entry milik username.
      */
     public function kickActiveUser(string $username)
     {
@@ -179,6 +180,14 @@ class MikrotikService
             (new Query('/ip/hotspot/active/print'))
                 ->where('user', $username)
         )->read();
+
+        // Kumpulkan MAC address sebelum remove session
+        $macAddresses = [];
+        foreach ($actives as $session) {
+            if (!empty($session['mac-address'])) {
+                $macAddresses[] = $session['mac-address'];
+            }
+        }
 
         // Remove setiap active session
         foreach ($actives as $session) {
@@ -190,7 +199,188 @@ class MikrotikService
             }
         }
 
+        // Hapus cookie hotspot milik username
+        $this->removeCookiesByUser($username);
+
+        // Hapus host entry + temporary block per MAC agar redirect ke login page
+        foreach (array_unique($macAddresses) as $mac) {
+            $this->removeHostByMac($mac);
+            $this->temporaryBlockMac($mac);
+        }
+
         return count($actives);
+    }
+
+    /**
+     * KICK SATU ACTIVE SESSION berdasarkan session .id
+     * Menghapus session + cookie + host entry + temporary block
+     * agar device langsung kehilangan koneksi dan redirect ke login page.
+     */
+    public function kickActiveSession(string $sessionId)
+    {
+        // Ambil info session dulu (untuk dapat MAC address & username)
+        $sessions = $this->client()->query(
+            (new Query('/ip/hotspot/active/print'))
+                ->where('.id', $sessionId)
+        )->read();
+
+        $username = $sessions[0]['user'] ?? null;
+        $mac = $sessions[0]['mac-address'] ?? null;
+
+        // 1. Hapus active session
+        $this->client()->query(
+            (new Query('/ip/hotspot/active/remove'))
+                ->equal('.id', $sessionId)
+        )->read();
+
+        // 2. Hapus cookie hotspot milik user + MAC ini
+        if ($username) {
+            $this->removeCookiesByUser($username, $mac);
+        }
+
+        // 3. Hapus host entry
+        if ($mac) {
+            $this->removeHostByMac($mac);
+        }
+
+        // 4. Temporary block MAC via ip-binding → force device captive portal re-detection
+        if ($mac) {
+            $this->temporaryBlockMac($mac);
+        }
+
+        return true;
+    }
+
+    /**
+     * Temporary block MAC via ip-binding lalu hapus.
+     *
+     * Alur:
+     *   1. Block MAC → device kehilangan semua traffic
+     *   2. Tunggu 3 detik → cukup bagi OS (Android/iOS) mendeteksi "no internet"
+     *   3. Hapus block → device reconnect, OS kirim captive portal probe (HTTP)
+     *   4. MikroTik intercept probe → redirect ke halaman login hotspot
+     *
+     * 3 detik diperlukan karena:
+     *   - Android cek konektivitas tiap 1-2 detik
+     *   - iOS cek tiap 2-3 detik
+     *   - Kurang dari itu, OS belum sempat menandai "no internet"
+     */
+    public function temporaryBlockMac(string $mac)
+    {
+        $bindingId = null;
+
+        try {
+            // Tambah ip-binding blocked sementara
+            $result = $this->client()->query(
+                (new Query('/ip/hotspot/ip-binding/add'))
+                    ->equal('mac-address', $mac)
+                    ->equal('type', 'blocked')
+                    ->equal('comment', 'auto-cutoff-temp')
+            )->read();
+
+            // Simpan ID dari binding yang baru dibuat untuk removal yang cepat
+            $bindingId = $result[0]['ret'] ?? null;
+
+            // Tunggu 3 detik agar OS device mendeteksi kehilangan koneksi
+            sleep(3);
+
+            // Hapus ip-binding sementara agar user bisa login ulang
+            if ($bindingId) {
+                // Hapus langsung berdasarkan ID (lebih cepat)
+                $this->client()->query(
+                    (new Query('/ip/hotspot/ip-binding/remove'))
+                        ->equal('.id', $bindingId)
+                )->read();
+            } else {
+                // Fallback: cari berdasarkan MAC + comment
+                $this->cleanupTempBindings($mac);
+            }
+        } catch (\Exception $e) {
+            // Bersihkan binding agar user tidak ter-block permanen
+            if ($bindingId) {
+                try {
+                    $this->client()->query(
+                        (new Query('/ip/hotspot/ip-binding/remove'))
+                            ->equal('.id', $bindingId)
+                    )->read();
+                } catch (\Exception $e2) {
+                    $this->cleanupTempBindings($mac);
+                }
+            } else {
+                $this->cleanupTempBindings($mac);
+            }
+        }
+    }
+
+    /**
+     * Bersihkan ip-binding sementara (failsafe).
+     */
+    protected function cleanupTempBindings(string $mac)
+    {
+        try {
+            $bindings = $this->client()->query(
+                (new Query('/ip/hotspot/ip-binding/print'))
+                    ->where('mac-address', $mac)
+                    ->where('comment', 'auto-cutoff-temp')
+            )->read();
+
+            foreach ($bindings as $binding) {
+                if (isset($binding['.id'])) {
+                    $this->client()->query(
+                        (new Query('/ip/hotspot/ip-binding/remove'))
+                            ->equal('.id', $binding['.id'])
+                    )->read();
+                }
+            }
+        } catch (\Exception $e) {
+            // Log error tapi jangan throw — ini sudah failsafe
+        }
+    }
+
+    /**
+     * Hapus cookie hotspot berdasarkan username (dan opsional MAC tertentu).
+     */
+    public function removeCookiesByUser(string $username, ?string $mac = null)
+    {
+        $query = (new Query('/ip/hotspot/cookie/print'))
+            ->where('user', $username);
+
+        $cookies = $this->client()->query($query)->read();
+
+        foreach ($cookies as $cookie) {
+            if (!isset($cookie['.id'])) continue;
+
+            // Jika MAC diberikan, hanya hapus cookie yang cocok
+            if ($mac !== null && ($cookie['mac-address'] ?? '') !== $mac) {
+                continue;
+            }
+
+            $this->client()->query(
+                (new Query('/ip/hotspot/cookie/remove'))
+                    ->equal('.id', $cookie['.id'])
+            )->read();
+        }
+    }
+
+    /**
+     * Hapus host entry berdasarkan MAC address.
+     * Ini membuat device kehilangan status "authorized" dan di-redirect ke login page.
+     */
+    public function removeHostByMac(string $mac)
+    {
+        $hosts = $this->client()->query(
+            (new Query('/ip/hotspot/host/print'))
+                ->where('mac-address', $mac)
+        )->read();
+
+        foreach ($hosts as $host) {
+            if (isset($host['.id'])) {
+                $this->client()->query(
+                    (new Query('/ip/hotspot/host/remove'))
+                        ->equal('.id', $host['.id'])
+                )->read();
+            }
+        }
     }
 
     /**
