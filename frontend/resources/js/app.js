@@ -195,17 +195,17 @@ Alpine.data('monitoringUsers', () => ({
 	// --- Filtered + Sorted ---
 	filteredActiveUsers() {
 		let data = [...this.activeUsers];
-		// Only apply filters when showFilters is on
+		// Search always active regardless of filter toggle
+		const q = this.search.toLowerCase().trim();
+		if (q) {
+			data = data.filter(au => {
+				const user = (au.user || '').toLowerCase();
+				const addr = (au.address || '').toLowerCase();
+				return user.includes(q) || addr.includes(q);
+			});
+		}
+		// Only apply other filters when showFilters is on
 		if (this.showFilters) {
-			// Search filter
-			const q = this.search.toLowerCase().trim();
-			if (q) {
-				data = data.filter(au => {
-					const user = (au.user || '').toLowerCase();
-					const addr = (au.address || '').toLowerCase();
-					return user.includes(q) || addr.includes(q);
-				});
-			}
 			// Subnet filter
 			if (this.subnetFilter !== 'all') {
 				const prefix = this.subnetFilter.replace('.0/24', '.');

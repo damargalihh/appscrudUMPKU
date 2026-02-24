@@ -194,11 +194,21 @@
                                             <span x-text="user.disabled ? 'Enable' : 'Disable'"></span>
                                         </button>
                                     </form>
-                                    <form method="POST" :action="`/hotspot-users/${user.id}/reset-password`" class="flex items-center gap-1">
+                                    <form method="POST" :action="`/hotspot-users/${user.id}/reset-password`" class="flex items-center gap-1"
+                                          x-data="{ showPass: false, passVal: '' }">
                                         <input type="hidden" name="_token" value="{{ csrf_token() }}">
-                                        <input type="password" name="password" placeholder="New pass"
-                                               class="w-20 px-2 py-1 text-[11px] border border-gray-200 rounded-md focus:ring-1 focus:ring-amber-300" required>
-                                        <button class="text-[11px] font-medium px-2 py-1 rounded-md text-blue-600 bg-blue-50 hover:bg-blue-100 transition">Reset</button>
+                                        <div class="relative">
+                                            <input :type="showPass ? 'text' : 'password'" name="password" placeholder="New pass"
+                                                   x-model="passVal"
+                                                   class="w-24 pl-2 pr-6 py-1 text-[11px] border border-gray-200 rounded-md focus:ring-1 focus:ring-amber-300" required>
+                                            <button type="button" @click="showPass = !showPass" class="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
+                                                <i class="fas text-[9px]" :class="showPass ? 'fa-eye-slash' : 'fa-eye'"></i>
+                                            </button>
+                                        </div>
+                                        <button type="button" @click="passVal = Math.floor(100000 + Math.random() * 900000).toString(); showPass = true" class="text-[11px] font-medium px-2 py-1 rounded-md text-purple-600 bg-purple-50 hover:bg-purple-100 transition" title="Generate password angka">
+                                            Generate
+                                        </button>
+                                        <button type="submit" class="text-[11px] font-medium px-2 py-1 rounded-md text-blue-600 bg-blue-50 hover:bg-blue-100 transition">Reset</button>
                                     </form>
                                     <form method="POST" :action="`/hotspot-users/${user.id}`" onsubmit="return confirm('Yakin hapus user ini?')">
                                         <input type="hidden" name="_token" value="{{ csrf_token() }}">
@@ -260,11 +270,21 @@
                         </div>
                     </div>
                     {{-- Reset password row --}}
-                    <form method="POST" :action="`/hotspot-users/${user.id}/reset-password`" class="flex items-center gap-1.5 mt-1.5 pl-10">
+                    <form method="POST" :action="`/hotspot-users/${user.id}/reset-password`" class="flex items-center gap-1.5 mt-1.5 pl-10"
+                          x-data="{ showPass: false, passVal: '' }">
                         <input type="hidden" name="_token" value="{{ csrf_token() }}">
-                        <input type="password" name="password" placeholder="Password baru"
-                               class="flex-1 px-2 py-1 text-[11px] border border-gray-200 rounded-md focus:ring-1 focus:ring-amber-300" required>
-                        <button class="text-[10px] font-medium px-2.5 py-1 rounded-md text-blue-600 bg-blue-50 active:bg-blue-100 transition flex-shrink-0">
+                        <div class="relative flex-1">
+                            <input :type="showPass ? 'text' : 'password'" name="password" placeholder="Password baru"
+                                   x-model="passVal"
+                                   class="w-full pl-2 pr-7 py-1 text-[11px] border border-gray-200 rounded-md focus:ring-1 focus:ring-amber-300" required>
+                            <button type="button" @click="showPass = !showPass" class="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
+                                <i class="fas text-[9px]" :class="showPass ? 'fa-eye-slash' : 'fa-eye'"></i>
+                            </button>
+                        </div>
+                        <button type="button" @click="passVal = Math.floor(100000 + Math.random() * 900000).toString(); showPass = true" class="text-[10px] font-medium px-2 py-1 rounded-md text-purple-600 bg-purple-50 active:bg-purple-100 transition flex-shrink-0" title="Generate password angka">
+                            Generate
+                        </button>
+                        <button type="submit" class="text-[10px] font-medium px-2.5 py-1 rounded-md text-blue-600 bg-blue-50 active:bg-blue-100 transition flex-shrink-0">
                             <i class="fas fa-key text-[9px]"></i> Reset
                         </button>
                     </form>
