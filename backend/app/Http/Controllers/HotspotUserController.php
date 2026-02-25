@@ -9,6 +9,7 @@ use App\Services\MikrotikService;
 use App\Services\MikrotikCacheService;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use App\Helpers\LogActivityHelper;
 
 class HotspotUserController extends Controller
 {
@@ -29,10 +30,10 @@ class HotspotUserController extends Controller
         try {
             $mt->addHotspotUser($request->validated());
             $cache->invalidateUserCaches();
+            LogActivityHelper::log('create_hotspot_user', $request->input('username') ?? '-');
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal menambah user hotspot: ' . $e->getMessage());
         }
-
         return back()->with('success', 'User hotspot berhasil ditambahkan');
     }
 
@@ -250,10 +251,10 @@ class HotspotUserController extends Controller
         try {
             $mt->deleteHotspotUser($id);
             $cache->invalidateUserCaches();
+            LogActivityHelper::log('delete_hotspot_user', $id);
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal menghapus user hotspot: ' . $e->getMessage());
         }
-
         return back()->with('success', 'User hotspot berhasil dihapus');
     }
 
@@ -265,17 +266,19 @@ class HotspotUserController extends Controller
         $success = 0;
         $failed  = 0;
 
+        $deletedIds = [];
         foreach ($request->validated()['ids'] as $id) {
             try {
                 $mt->deleteHotspotUser($id);
                 $success++;
+                $deletedIds[] = $id;
             } catch (\Exception $e) {
                 $failed++;
             }
         }
-
         if ($success > 0) {
             $cache->invalidateUserCaches();
+            LogActivityHelper::log('bulk_delete_hotspot_user', implode(',', $deletedIds));
         }
 
         $msg = "{$success} user berhasil dihapus";
@@ -291,13 +294,16 @@ class HotspotUserController extends Controller
      */
     public function resetPassword(ResetHotspotPasswordRequest $request, string $id, MikrotikService $mt, MikrotikCacheService $cache)
     {
+        $status = 'success';
         try {
             $mt->resetPassword($id, $request->validated()['password']);
             $cache->invalidateUserCaches();
         } catch (\Exception $e) {
+            $status = 'failed';
+            \App\Helpers\LogActivityHelper::log('reset_hotspot_password', $id, $status);
             return back()->with('error', 'Gagal reset password: ' . $e->getMessage());
         }
-
+        \App\Helpers\LogActivityHelper::log('reset_hotspot_password', $id, $status);
         return back()->with('success', 'Password berhasil direset');
     }
 
@@ -306,6 +312,7 @@ class HotspotUserController extends Controller
      */
     public function disable(string $id, MikrotikService $mt, MikrotikCacheService $cache)
     {
+        $status = 'success';
         try {
             $username = $mt->getUsernameById($id);
             $mt->disableUser($id);
@@ -314,9 +321,11 @@ class HotspotUserController extends Controller
             }
             $cache->invalidateUserCaches();
         } catch (\Exception $e) {
+            $status = 'failed';
+            \App\Helpers\LogActivityHelper::log('disable_hotspot_user', $id, $status);
             return back()->with('error', 'Gagal disable user: ' . $e->getMessage());
         }
-
+        \App\Helpers\LogActivityHelper::log('disable_hotspot_user', $id, $status);
         return back()->with('success', 'User berhasil di-disable & terputus dari jaringan');
     }
 
@@ -325,13 +334,16 @@ class HotspotUserController extends Controller
      */
     public function enable(string $id, MikrotikService $mt, MikrotikCacheService $cache)
     {
+        $status = 'success';
         try {
             $mt->enableUser($id);
             $cache->invalidateUserCaches();
         } catch (\Exception $e) {
+            $status = 'failed';
+            \App\Helpers\LogActivityHelper::log('enable_hotspot_user', $id, $status);
             return back()->with('error', 'Gagal enable user: ' . $e->getMessage());
         }
-
+        \App\Helpers\LogActivityHelper::log('enable_hotspot_user', $id, $status);
         return back()->with('success', 'User berhasil di-enable');
     }
 

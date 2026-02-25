@@ -35,16 +35,20 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
-
-        event(new Registered($user));
-
-        Auth::login($user);
-
+        $status = 'success';
+        $user = null;
+        try {
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+            ]);
+            event(new Registered($user));
+            Auth::login($user);
+        } catch (\Throwable $e) {
+            $status = 'failed';
+        }
+        \App\Helpers\LogActivityHelper::log('register', $user ? $user->email : null, $status, $user);
         return redirect(route('dashboard', absolute: false));
     }
 }

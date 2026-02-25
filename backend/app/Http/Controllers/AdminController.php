@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
+use App\Helpers\LogActivityHelper;
 
 class AdminController extends Controller
 {
@@ -33,14 +34,14 @@ class AdminController extends Controller
             'role'     => ['required', 'in:super_admin,admin'],
         ]);
 
-        User::create([
+        $admin = User::create([
             'name'     => $request->name,
             'email'    => $request->email,
             'password' => Hash::make($request->password),
             'is_admin' => true,
             'role'     => $request->role,
         ]);
-
+        LogActivityHelper::log('create_admin', $admin->email);
         return redirect()->route('admin.index')->with('success', 'Admin berhasil ditambahkan.');
     }
 
@@ -76,7 +77,7 @@ class AdminController extends Controller
         }
 
         $admin->update($data);
-
+        LogActivityHelper::log('update_admin', $admin->email);
         return redirect()->route('admin.index')->with('success', 'Data admin berhasil diperbarui.');
     }
 
@@ -95,8 +96,9 @@ class AdminController extends Controller
             return redirect()->route('admin.index')->with('error', 'Tidak dapat menghapus admin terakhir.');
         }
 
+        $adminEmail = $admin->email;
         $admin->delete();
-
+        LogActivityHelper::log('delete_admin', $adminEmail);
         return redirect()->route('admin.index')->with('success', 'Admin berhasil dihapus.');
     }
 }

@@ -1,4 +1,5 @@
-<x-app-layout>
+@extends('layouts.app')
+@section('content')
 
 @section('page-title', 'Pengaturan Profil')
 
@@ -33,4 +34,4 @@
 
 </div>
 
-</x-app-layout>
+@endsection

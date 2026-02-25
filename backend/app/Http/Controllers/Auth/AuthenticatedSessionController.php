@@ -24,10 +24,19 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
-        $request->authenticate();
-
-        $request->session()->regenerate();
-
+        $status = 'success';
+        $user = null;
+        try {
+            $request->authenticate();
+            $user = Auth::user();
+            $request->session()->regenerate();
+        } catch (\Throwable $e) {
+            $status = 'failed';
+        }
+        \App\Helpers\LogActivityHelper::log('login', $user ? $user->email : null, $status, $user);
+        if ($status === 'failed') {
+            return back()->withErrors(['email' => 'Login gagal.'])->withInput();
+        }
         return redirect()->intended(route('dashboard', absolute: false));
     }
 
@@ -36,12 +45,11 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        $user = Auth::user();
         Auth::guard('web')->logout();
-
         $request->session()->invalidate();
-
         $request->session()->regenerateToken();
-
+        \App\Helpers\LogActivityHelper::log('logout', $user ? $user->email : null, 'success', $user);
         return redirect('/');
     }
 }

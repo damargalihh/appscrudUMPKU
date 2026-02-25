@@ -22,6 +22,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Dashboard
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
+    // Log Aktivitas Admin (khusus full admin)
+    Route::middleware('is_super_admin')->prefix('admin')->name('admin.')->group(function () {
+        Route::get('log-activities', [\App\Http\Controllers\LogActivityController::class, 'index'])->name('log_activities.index');
+    });
+
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

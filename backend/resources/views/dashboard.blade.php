@@ -1,4 +1,5 @@
-<x-app-layout>
+@extends('layouts.app')
+@section('content')
 
 @section('page-title', 'Dashboard')
 
@@ -586,4 +587,4 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
-</x-app-layout>
+@endsection

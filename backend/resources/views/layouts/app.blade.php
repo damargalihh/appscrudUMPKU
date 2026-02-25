@@ -50,9 +50,14 @@
 
                 @if(auth()->user()->isSuperAdmin())
                 <a href="{{ route('admin.index') }}" @click="mobileMenu = false"
-                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 {{ request()->routeIs('admin.*') ? 'bg-white/25 text-white shadow-lg' : 'text-white/80 hover:bg-white/15 hover:text-white' }}">
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 {{ request()->routeIs('admin.*') && !request()->routeIs('admin.log_activities.index') ? 'bg-white/25 text-white shadow-lg' : 'text-white/80 hover:bg-white/15 hover:text-white' }}">
                     <i class="fas fa-user-shield w-5 text-center flex-shrink-0"></i>
                     <span x-show="sidebarOpen">Manajemen Admin</span>
+                </a>
+                <a href="{{ route('admin.log_activities.index') }}" @click="mobileMenu = false"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 {{ request()->routeIs('admin.log_activities.index') ? 'bg-white/25 text-white shadow-lg' : 'text-white/80 hover:bg-white/15 hover:text-white' }}">
+                    <i class="fas fa-list-check w-5 text-center flex-shrink-0"></i>
+                    <span x-show="sidebarOpen">Log Aktivitas</span>
                 </a>
                 @endif
 
@@ -139,7 +144,7 @@
 
             {{-- PAGE CONTENT --}}
             <main class="p-3 md:p-5 flex-1">
-                {{ $slot }}
+                @yield('content')
             </main>
 
             {{-- FOOTER --}}

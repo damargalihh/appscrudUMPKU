@@ -1,4 +1,5 @@
-<x-app-layout>
+@extends('layouts.app')
+@section('content')
 
 @section('page-title', 'Manajemen Admin')
 
@@ -237,4 +238,4 @@
 
 </div>
 
-</x-app-layout>
+@endsection

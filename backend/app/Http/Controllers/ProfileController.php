@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\View\View;
+use App\Helpers\LogActivityHelper;
 
 class ProfileController extends Controller
 {
@@ -26,14 +27,13 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
-
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        $user = $request->user();
+        $user->fill($request->validated());
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
         }
-
-        $request->user()->save();
-
+        $user->save();
+        LogActivityHelper::log('update_profile', $user->email);
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
 
@@ -47,14 +47,12 @@ class ProfileController extends Controller
         ]);
 
         $user = $request->user();
-
+        $userEmail = $user->email;
         Auth::logout();
-
         $user->delete();
-
+        LogActivityHelper::log('delete_profile', $userEmail);
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-
         return Redirect::to('/');
     }
 }
