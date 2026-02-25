@@ -48,6 +48,14 @@
                     <span x-show="sidebarOpen">Dashboard</span>
                 </a>
 
+                @if(auth()->user()->isSuperAdmin())
+                <a href="{{ route('admin.index') }}" @click="mobileMenu = false"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 {{ request()->routeIs('admin.*') ? 'bg-white/25 text-white shadow-lg' : 'text-white/80 hover:bg-white/15 hover:text-white' }}">
+                    <i class="fas fa-user-shield w-5 text-center flex-shrink-0"></i>
+                    <span x-show="sidebarOpen">Manajemen Admin</span>
+                </a>
+                @endif
+
                 <a href="{{ route('hotspot.index') }}" @click="mobileMenu = false"
                    class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 {{ request()->routeIs('hotspot.index') ? 'bg-white/25 text-white shadow-lg' : 'text-white/80 hover:bg-white/15 hover:text-white' }}">
                     <i class="fas fa-users w-5 text-center flex-shrink-0"></i>

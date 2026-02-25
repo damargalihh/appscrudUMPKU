@@ -57,9 +57,7 @@
 
         {{-- Footer Link --}}
         <div class="text-center mt-6">
-            <p class="text-sm text-[#4a4a6a]">Belum punya akun?
-                <a href="{{ route('register') }}" class="text-[#FF8C00] font-semibold hover:text-[#E65100] transition">Daftar Sekarang</a>
-            </p>
+            <p class="text-sm text-[#4a4a6a]">Hubungi admin untuk mendapatkan akun.</p>
         </div>
     </div>
 </x-guest-layout>

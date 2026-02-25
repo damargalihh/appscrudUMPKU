@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HotspotUserController;
 use App\Http\Controllers\Api\HotspotApiController;
@@ -9,16 +10,12 @@ use App\Http\Controllers\TestMikrotikController;
 use Illuminate\Support\Facades\Route;
 
 /*
-|--------------------------------------------------------------------------
 | Redirect ke login
-|--------------------------------------------------------------------------
 */
 Route::get('/', fn() => redirect()->route('login'));
 
 /*
-|--------------------------------------------------------------------------
 | Routes yang membutuhkan autentikasi
-|--------------------------------------------------------------------------
 */
 Route::middleware(['auth', 'verified'])->group(function () {
 
@@ -29,6 +26,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Manajemen Admin (hanya super admin)
+    Route::middleware('is_super_admin')->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/', [AdminController::class, 'index'])->name('index');
+        Route::post('/', [AdminController::class, 'store'])->name('store');
+        Route::put('/{admin}', [AdminController::class, 'update'])->name('update');
+        Route::delete('/{admin}', [AdminController::class, 'destroy'])->name('destroy');
+    });
 
     // Hotspot users CRUD
     Route::prefix('hotspot-users')->name('hotspot.')->group(function () {
@@ -60,9 +65,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 /*
-|--------------------------------------------------------------------------
 | Self-registration hotspot (publik, tanpa login)
-|--------------------------------------------------------------------------
 */
 Route::prefix('register-hotspot')->group(function () {
     Route::get('/dosen', [SelfRegisterController::class, 'showForm'])->defaults('role', 'dosen');
@@ -73,9 +76,7 @@ Route::prefix('register-hotspot')->group(function () {
 });
 
 /*
-|--------------------------------------------------------------------------
 | Debug / Test (nonaktifkan di production)
-|--------------------------------------------------------------------------
 */
 if (app()->environment('local')) {
     Route::get('/test-mt', [TestMikrotikController::class, 'index']);

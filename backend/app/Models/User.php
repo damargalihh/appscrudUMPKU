@@ -21,7 +21,29 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'is_admin',
+        'role',
     ];
+
+    /**
+     * Cek apakah user adalah super admin (full control).
+     */
+    public function isSuperAdmin(): bool
+    {
+        return $this->is_admin && $this->role === 'super_admin';
+    }
+
+    /**
+     * Label role yang readable.
+     */
+    public function getRoleLabelAttribute(): string
+    {
+        return match ($this->role) {
+            'super_admin' => 'Full Admin',
+            'admin'       => 'Admin',
+            default       => 'Admin',
+        };
+    }
 
     /**
      * The attributes that should be hidden for serialization.
@@ -43,6 +65,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_admin' => 'boolean',
         ];
     }
 }

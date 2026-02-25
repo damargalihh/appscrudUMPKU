@@ -32,11 +32,8 @@
                     <img src="{{ asset('img/logoweb.png') }}" alt="UMPKU" class="h-8 sm:h-10 w-auto">
                 </a>
                 <div class="flex items-center gap-2">
-                    <a href="{{ route('login') }}" class="px-3 sm:px-5 py-2 text-sm font-medium text-gray-700 hover:text-[#FF8C00] transition flex items-center gap-1.5">
+                    <a href="{{ route('login') }}" class="px-3 sm:px-5 py-2 text-sm font-semibold bg-gradient-to-r from-[#FF8C00] to-[#E65100] text-white rounded-lg hover:shadow-lg transition flex items-center gap-1.5">
                         <i class="fas fa-sign-in-alt text-xs"></i> <span>Login</span>
-                    </a>
-                    <a href="{{ route('register') }}" class="px-3 sm:px-5 py-2 text-sm font-semibold bg-gradient-to-r from-[#FF8C00] to-[#E65100] text-white rounded-lg hover:shadow-lg transition flex items-center gap-1.5">
-                        <i class="fas fa-user-plus text-xs"></i> <span class="hidden sm:inline">Register</span><span class="sm:hidden">Daftar</span>
                     </a>
                 </div>
             </div>
