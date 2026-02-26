@@ -145,6 +145,7 @@
             {{-- PAGE CONTENT --}}
             <main class="p-3 md:p-5 flex-1">
                 @yield('content')
+                {{ $slot ?? '' }}
             </main>
 
             {{-- FOOTER --}}

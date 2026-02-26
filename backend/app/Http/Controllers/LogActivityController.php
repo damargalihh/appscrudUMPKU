@@ -29,7 +29,7 @@ class LogActivityController extends Controller
             $query->whereDate('created_at', $request->date);
         }
 
-        $logs = $query->paginate(20);
+        $logs = $query->get();
         return view('admin.log_activities.index', compact('logs', 'usernames'));
     }
 }

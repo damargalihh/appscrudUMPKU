@@ -295,16 +295,20 @@ class HotspotUserController extends Controller
     public function resetPassword(ResetHotspotPasswordRequest $request, string $id, MikrotikService $mt, MikrotikCacheService $cache)
     {
         $status = 'success';
+        $username = null;
         try {
+            $username = $mt->getUsernameById($id);
             $mt->resetPassword($id, $request->validated()['password']);
             $cache->invalidateUserCaches();
         } catch (\Exception $e) {
             $status = 'failed';
             \App\Helpers\LogActivityHelper::log('reset_hotspot_password', $id, $status);
-            return back()->with('error', 'Gagal reset password: ' . $e->getMessage());
+            $username = $username ?: $id;
+            return back()->with('error', 'Gagal reset password user: ' . $username . '. ' . $e->getMessage());
         }
         \App\Helpers\LogActivityHelper::log('reset_hotspot_password', $id, $status);
-        return back()->with('success', 'Password berhasil direset');
+        $username = $username ?: $id;
+        return back()->with('success', 'Password user ' . $username . ' berhasil direset');
     }
 
     /**
