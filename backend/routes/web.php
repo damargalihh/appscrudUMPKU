@@ -81,6 +81,13 @@ Route::prefix('register-hotspot')->group(function () {
 });
 
 /*
+| Authentication routes (Google OAuth)
+*/ 
+Route::get('/login', [HotspotController::class, 'login']);
+Route::get('/auth/google', [HotspotController::class, 'redirect']);
+Route::get('/auth/google/callback', [HotspotController::class, 'callback']);
+
+/*
 | Debug / Test (nonaktifkan di production)
 */
 if (app()->environment('local')) {
