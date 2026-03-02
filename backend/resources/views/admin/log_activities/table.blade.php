@@ -20,6 +20,10 @@
                     <span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
                         <i class="fas fa-crown text-[8px]"></i> Full Admin
                     </span>
+                @elseif($log->role === 'hotspot_user')
+                    <span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
+                        <i class="fas fa-wifi text-[8px]"></i> Hotspot User
+                    </span>
                 @else
                     <span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
                         <i class="fas fa-user-cog text-[8px]"></i> Admin

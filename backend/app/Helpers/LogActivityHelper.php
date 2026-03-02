@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Auth;
 class LogActivityHelper
 {
     /**
-     * Log aktivitas dengan format aksi - username/email/ID jika ada target.
+     * Log aktivitas admin (user harus terautentikasi di sistem).
      *
      * @param string $action
      * @param string|null $targetUsername
@@ -28,7 +28,33 @@ class LogActivityHelper
         LogActivity::create([
             'user_id'    => $user->id,
             'username'   => $user->email,
-            'role'       => $user->role,
+            'role'       => $user->role ?? 'admin',
+            'action'     => $aksi,
+            'ip_address' => request()->ip(),
+            'status'     => $status,
+        ]);
+    }
+
+    /**
+     * Log aktivitas hotspot (user mungkin tidak ada di tabel users).
+     * Digunakan untuk Google OAuth login hotspot.
+     *
+     * @param string $action
+     * @param string $email
+     * @param string|null $targetUsername
+     * @param string $status
+     */
+    public static function logHotspot($action, $email, $targetUsername = null, $status = 'success')
+    {
+        $aksi = $action;
+        if ($targetUsername) {
+            $aksi .= ' - ' . $targetUsername;
+        }
+
+        LogActivity::create([
+            'user_id'    => null,
+            'username'   => $email ?? 'unknown',
+            'role'       => 'hotspot_user',
             'action'     => $aksi,
             'ip_address' => request()->ip(),
             'status'     => $status,

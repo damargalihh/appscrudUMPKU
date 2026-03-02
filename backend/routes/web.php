@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\HotspotController;
 use App\Http\Controllers\HotspotUserController;
 use App\Http\Controllers\Api\HotspotApiController;
 use App\Http\Controllers\ProfileController;
@@ -81,11 +82,12 @@ Route::prefix('register-hotspot')->group(function () {
 });
 
 /*
-| Authentication routes (Google OAuth)
-*/ 
-Route::get('/login', [HotspotController::class, 'login']);
-Route::get('/auth/google', [HotspotController::class, 'redirect']);
-Route::get('/auth/google/callback', [HotspotController::class, 'callback']);
+| Hotspot Login (Google OAuth) — halaman login captive portal WiFi
+*/
+Route::get('/hotspot/login', [HotspotController::class, 'showLogin'])->name('hotspot.login');
+Route::get('/hotspot/success', [HotspotController::class, 'success'])->name('hotspot.success');
+Route::get('/auth/google', [HotspotController::class, 'redirectToGoogle'])->name('auth.google');
+Route::get('/auth/google/callback', [HotspotController::class, 'handleGoogleCallback'])->name('auth.google.callback');
 
 /*
 | Debug / Test (nonaktifkan di production)

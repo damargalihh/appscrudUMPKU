@@ -18,8 +18,33 @@ class LogActivity extends Model
         'status',
     ];
 
+    protected $casts = [
+        'user_id' => 'integer',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Label role yang lebih ramah pengguna.
+     */
+    public function getRoleLabelAttribute(): string
+    {
+        return match ($this->role) {
+            'super_admin'  => 'Full Admin',
+            'admin'        => 'Admin',
+            'hotspot_user' => 'Hotspot User',
+            default        => $this->role ?? 'Unknown',
+        };
+    }
+
+    /**
+     * Apakah log ini dari hotspot user (bukan admin).
+     */
+    public function isHotspotUser(): bool
+    {
+        return $this->role === 'hotspot_user';
     }
 }

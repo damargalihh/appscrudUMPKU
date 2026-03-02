@@ -466,4 +466,101 @@ class MikrotikService
 
         return $result[0]['name'] ?? 'MikroTik';
     }
+
+    /**
+     * CARI USER HOTSPOT BERDASARKAN EMAIL
+     * Mencari di field 'name' dan 'comment' hotspot user
+     */
+    public function findHotspotUserByEmail(string $email): ?array
+    {
+        $users = $this->getHotspotUsers();
+        $emailLower = strtolower(trim($email));
+
+        foreach ($users as $user) {
+            // Cek apakah email cocok dengan field 'name'
+            if (isset($user['name']) && strtolower(trim($user['name'])) === $emailLower) {
+                return $user;
+            }
+            // Cek apakah email ada di field 'comment'
+            if (isset($user['comment']) && str_contains(strtolower($user['comment']), $emailLower)) {
+                return $user;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * CONNECT USER HOTSPOT VIA GOOGLE OAUTH
+     * Mencocokkan email Google dengan user hotspot MikroTik,
+     * lalu mengaktifkan koneksi via IP-binding bypass untuk MAC address user.
+     */
+    public function connectUser(string $email, ?string $macAddress = null): array
+    {
+        $hotspotUser = $this->findHotspotUserByEmail($email);
+
+        if (!$hotspotUser) {
+            throw new \RuntimeException('Email tidak ditemukan di daftar user hotspot MikroTik.');
+        }
+
+        // Jika user disabled, aktifkan dulu
+        if (($hotspotUser['disabled'] ?? 'false') === 'true') {
+            $this->enableUser($hotspotUser['.id']);
+        }
+
+        // Jika MAC address tersedia, buat IP-binding bypass agar user langsung terkoneksi
+        if ($macAddress) {
+            $this->removeGoogleOAuthBindings($macAddress);
+
+            $this->client()->query(
+                (new Query('/ip/hotspot/ip-binding/add'))
+                    ->equal('mac-address', $macAddress)
+                    ->equal('type', 'bypassed')
+                    ->equal('comment', 'google-oauth:' . $email)
+            )->read();
+        }
+
+        return $hotspotUser;
+    }
+
+    /**
+     * HAPUS IP-BINDING GOOGLE OAUTH LAMA BERDASARKAN MAC
+     */
+    public function removeGoogleOAuthBindings(string $macAddress): void
+    {
+        try {
+            $bindings = $this->client()->query(
+                (new Query('/ip/hotspot/ip-binding/print'))
+                    ->where('mac-address', $macAddress)
+            )->read();
+
+            foreach ($bindings as $binding) {
+                if (
+                    isset($binding['.id']) &&
+                    isset($binding['comment']) &&
+                    str_starts_with($binding['comment'], 'google-oauth:')
+                ) {
+                    $this->client()->query(
+                        (new Query('/ip/hotspot/ip-binding/remove'))
+                            ->equal('.id', $binding['.id'])
+                    )->read();
+                }
+            }
+        } catch (\Exception $e) {
+            // Abaikan error pembersihan — bukan critical
+        }
+    }
+
+    /**
+     * AMBIL HOST INFO BERDASARKAN IP ADDRESS
+     */
+    public function getHostByIp(string $ip): ?array
+    {
+        $hosts = $this->client()->query(
+            (new Query('/ip/hotspot/host/print'))
+                ->where('address', $ip)
+        )->read();
+
+        return $hosts[0] ?? null;
+    }
 }

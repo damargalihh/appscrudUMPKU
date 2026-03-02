@@ -15,20 +15,26 @@
         <form method="GET" class="flex flex-wrap gap-2 mb-3 items-center">
             <select name="action" class="text-xs border border-gray-200 rounded-lg px-3 py-2 w-44">
                 <option value="">Semua Aksi</option>
-                <option value="login" @selected(request('action')=='login')>Login</option>
-                <option value="login_failed" @selected(request('action')=='login_failed')>Login Gagal</option>
-                <option value="logout" @selected(request('action')=='logout')>Logout</option>
-                <option value="login_attempt" @selected(request('action')=='login_attempt')>Percobaan Login</option>
-                <option value="update_password" @selected(request('action')=='update_password')>Perubahan Password</option>
-                <option value="enable_user" @selected(request('action')=='enable_user')>Aktifkan User</option>
-                <option value="disable_user" @selected(request('action')=='disable_user')>Nonaktifkan User</option>
-                <option value="reset_password" @selected(request('action')=='reset_password')>Reset Password User</option>
-                <option value="create_admin" @selected(request('action')=='create_admin')>Tambah Admin</option>
-                <option value="update_admin" @selected(request('action')=='update_admin')>Update Admin</option>
-                <option value="delete_admin" @selected(request('action')=='delete_admin')>Hapus Admin</option>
-                <option value="create_hotspot_user" @selected(request('action')=='create_hotspot_user')>Tambah User Hotspot</option>
-                <option value="delete_hotspot_user" @selected(request('action')=='delete_hotspot_user')>Hapus User Hotspot</option>
-                <option value="bulk_delete_hotspot_user" @selected(request('action')=='bulk_delete_hotspot_user')>Bulk Hapus User Hotspot</option>
+                <optgroup label="Admin">
+                    <option value="login" @selected(request('action')=='login')>Login Admin</option>
+                    <option value="logout" @selected(request('action')=='logout')>Logout</option>
+                    <option value="change_password" @selected(request('action')=='change_password')>Ubah Password</option>
+                    <option value="update_profile" @selected(request('action')=='update_profile')>Update Profil</option>
+                    <option value="create_admin" @selected(request('action')=='create_admin')>Tambah Admin</option>
+                    <option value="update_admin" @selected(request('action')=='update_admin')>Update Admin</option>
+                    <option value="delete_admin" @selected(request('action')=='delete_admin')>Hapus Admin</option>
+                </optgroup>
+                <optgroup label="Hotspot Management">
+                    <option value="create_hotspot_user" @selected(request('action')=='create_hotspot_user')>Tambah User Hotspot</option>
+                    <option value="delete_hotspot_user" @selected(request('action')=='delete_hotspot_user')>Hapus User Hotspot</option>
+                    <option value="bulk_delete_hotspot_user" @selected(request('action')=='bulk_delete_hotspot_user')>Bulk Hapus User Hotspot</option>
+                    <option value="reset_hotspot_password" @selected(request('action')=='reset_hotspot_password')>Reset Password Hotspot</option>
+                    <option value="disable_hotspot_user" @selected(request('action')=='disable_hotspot_user')>Nonaktifkan User</option>
+                    <option value="enable_hotspot_user" @selected(request('action')=='enable_hotspot_user')>Aktifkan User</option>
+                </optgroup>
+                <optgroup label="Google OAuth Hotspot">
+                    <option value="google_login" @selected(request('action')=='google_login')>Login Google Hotspot</option>
+                </optgroup>
             </select>
             <select name="status" class="text-xs border border-gray-200 rounded-lg px-3 py-2 w-32">
                 <option value="">Semua Status</option>
@@ -70,9 +76,19 @@
                                         <i class="fas fa-crown text-[8px]"></i> Full Admin
                                     </span>
                                 </template>
-                                <template x-if="log.role !== 'super_admin'">
+                                <template x-if="log.role === 'admin'">
                                     <span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
                                         <i class="fas fa-user-cog text-[8px]"></i> Admin
+                                    </span>
+                                </template>
+                                <template x-if="log.role === 'hotspot_user'">
+                                    <span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
+                                        <i class="fas fa-wifi text-[8px]"></i> Hotspot User
+                                    </span>
+                                </template>
+                                <template x-if="log.role !== 'super_admin' && log.role !== 'admin' && log.role !== 'hotspot_user'">
+                                    <span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
+                                        <i class="fas fa-user text-[8px]"></i> <span x-text="log.role"></span>
                                     </span>
                                 </template>
                             </td>

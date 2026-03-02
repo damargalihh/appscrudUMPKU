@@ -30,7 +30,7 @@ class HotspotUserController extends Controller
         try {
             $mt->addHotspotUser($request->validated());
             $cache->invalidateUserCaches();
-            LogActivityHelper::log('create_hotspot_user', $request->input('username') ?? '-');
+            LogActivityHelper::log('create_hotspot_user', $request->input('name'));
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal menambah user hotspot: ' . $e->getMessage());
         }
@@ -249,9 +249,10 @@ class HotspotUserController extends Controller
     public function destroy(string $id, MikrotikService $mt, MikrotikCacheService $cache)
     {
         try {
+            $username = $mt->getUsernameById($id) ?? $id;
             $mt->deleteHotspotUser($id);
             $cache->invalidateUserCaches();
-            LogActivityHelper::log('delete_hotspot_user', $id);
+            LogActivityHelper::log('delete_hotspot_user', $username);
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal menghapus user hotspot: ' . $e->getMessage());
         }
@@ -266,19 +267,20 @@ class HotspotUserController extends Controller
         $success = 0;
         $failed  = 0;
 
-        $deletedIds = [];
+        $deletedNames = [];
         foreach ($request->validated()['ids'] as $id) {
             try {
+                $username = $mt->getUsernameById($id) ?? $id;
                 $mt->deleteHotspotUser($id);
                 $success++;
-                $deletedIds[] = $id;
+                $deletedNames[] = $username;
             } catch (\Exception $e) {
                 $failed++;
             }
         }
         if ($success > 0) {
             $cache->invalidateUserCaches();
-            LogActivityHelper::log('bulk_delete_hotspot_user', implode(',', $deletedIds));
+            LogActivityHelper::log('bulk_delete_hotspot_user', implode(', ', $deletedNames));
         }
 
         $msg = "{$success} user berhasil dihapus";
@@ -297,17 +299,15 @@ class HotspotUserController extends Controller
         $status = 'success';
         $username = null;
         try {
-            $username = $mt->getUsernameById($id);
+            $username = $mt->getUsernameById($id) ?? $id;
             $mt->resetPassword($id, $request->validated()['password']);
             $cache->invalidateUserCaches();
         } catch (\Exception $e) {
             $status = 'failed';
-            \App\Helpers\LogActivityHelper::log('reset_hotspot_password', $id, $status);
-            $username = $username ?: $id;
-            return back()->with('error', 'Gagal reset password user: ' . $username . '. ' . $e->getMessage());
+            \App\Helpers\LogActivityHelper::log('reset_hotspot_password', $username ?? $id, $status);
+            return back()->with('error', 'Gagal reset password user: ' . ($username ?? $id) . '. ' . $e->getMessage());
         }
-        \App\Helpers\LogActivityHelper::log('reset_hotspot_password', $id, $status);
-        $username = $username ?: $id;
+        \App\Helpers\LogActivityHelper::log('reset_hotspot_password', $username, $status);
         return back()->with('success', 'Password user ' . $username . ' berhasil direset');
     }
 
@@ -317,20 +317,21 @@ class HotspotUserController extends Controller
     public function disable(string $id, MikrotikService $mt, MikrotikCacheService $cache)
     {
         $status = 'success';
+        $username = null;
         try {
-            $username = $mt->getUsernameById($id);
+            $username = $mt->getUsernameById($id) ?? $id;
             $mt->disableUser($id);
-            if ($username) {
+            if ($username && $username !== $id) {
                 $mt->kickActiveUser($username);
             }
             $cache->invalidateUserCaches();
         } catch (\Exception $e) {
             $status = 'failed';
-            \App\Helpers\LogActivityHelper::log('disable_hotspot_user', $id, $status);
+            \App\Helpers\LogActivityHelper::log('disable_hotspot_user', $username ?? $id, $status);
             return back()->with('error', 'Gagal disable user: ' . $e->getMessage());
         }
-        \App\Helpers\LogActivityHelper::log('disable_hotspot_user', $id, $status);
-        return back()->with('success', 'User berhasil di-disable & terputus dari jaringan');
+        \App\Helpers\LogActivityHelper::log('disable_hotspot_user', $username, $status);
+        return back()->with('success', 'User ' . $username . ' berhasil di-disable & terputus dari jaringan');
     }
 
     /**
@@ -339,16 +340,18 @@ class HotspotUserController extends Controller
     public function enable(string $id, MikrotikService $mt, MikrotikCacheService $cache)
     {
         $status = 'success';
+        $username = null;
         try {
+            $username = $mt->getUsernameById($id) ?? $id;
             $mt->enableUser($id);
             $cache->invalidateUserCaches();
         } catch (\Exception $e) {
             $status = 'failed';
-            \App\Helpers\LogActivityHelper::log('enable_hotspot_user', $id, $status);
+            \App\Helpers\LogActivityHelper::log('enable_hotspot_user', $username ?? $id, $status);
             return back()->with('error', 'Gagal enable user: ' . $e->getMessage());
         }
-        \App\Helpers\LogActivityHelper::log('enable_hotspot_user', $id, $status);
-        return back()->with('success', 'User berhasil di-enable');
+        \App\Helpers\LogActivityHelper::log('enable_hotspot_user', $username, $status);
+        return back()->with('success', 'User ' . $username . ' berhasil di-enable');
     }
 
     /**
