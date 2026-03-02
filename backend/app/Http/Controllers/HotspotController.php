@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 use App\Services\MikrotikService;
 use App\Helpers\LogActivityHelper;
@@ -33,16 +34,32 @@ class HotspotController extends Controller
      */
     public function redirectToGoogle()
     {
+        // Pastikan ini flow login, bukan register
+        session()->forget('register_profile');
+
         return Socialite::driver('google')->redirect();
     }
 
     /**
      * Handle callback dari Google OAuth.
-     * Cocokkan email Google dengan user hotspot MikroTik.
+     * Mendeteksi flow register atau login berdasarkan session.
      */
     public function handleGoogleCallback(Request $request, MikrotikService $mikrotik)
     {
-        $googleUser = null;
+        // Cek apakah ini flow registrasi (dari SelfRegisterController)
+        if (session('register_profile')) {
+            return $this->handleGoogleRegister($mikrotik);
+        }
+
+        return $this->handleGoogleLogin($request, $mikrotik);
+    }
+
+    /**
+     * Handle Google OAuth LOGIN flow.
+     * Cocokkan email Google dengan user hotspot MikroTik yang sudah ada.
+     */
+    private function handleGoogleLogin(Request $request, MikrotikService $mikrotik)
+    {
         $email = 'unknown';
 
         try {
@@ -87,10 +104,67 @@ class HotspotController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            // Log gagal
             LogActivityHelper::logHotspot('google_login', $email, null, 'failed');
 
             return redirect('/hotspot/login')->with('error', 'Login gagal: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Handle Google OAuth REGISTER flow.
+     * Membuat user hotspot baru di MikroTik menggunakan email Google.
+     */
+    private function handleGoogleRegister(MikrotikService $mikrotik)
+    {
+        $profile = session('register_profile', 'TamuMagang');
+
+        // Map profile ke role untuk redirect
+        $roleMap = [
+            'DosenMagang'     => 'dosen',
+            'MahasiswaMagang' => 'mahasiswa',
+            'StaffMagang'     => 'staff',
+            'TamuMagang'      => 'tamu',
+        ];
+        $role = $roleMap[$profile] ?? 'tamu';
+
+        try {
+            $googleUser = Socialite::driver('google')->stateless()->user();
+            $email = $googleUser->getEmail();
+            $name  = $googleUser->getName();
+
+            // Cek apakah email sudah terdaftar
+            $existing = $mikrotik->findHotspotUserByEmail($email);
+
+            if ($existing) {
+                session()->forget('register_profile');
+                return redirect("/register-hotspot/{$role}")
+                    ->with('error', "Email {$email} sudah terdaftar sebagai user hotspot (username: {$existing['name']}).");
+            }
+
+            // Generate username dari email & random password
+            $username = Str::before($email, '@');
+            $password = Str::random(8);
+
+            $mikrotik->addHotspotUser([
+                'name'     => $username,
+                'password' => $password,
+                'profile'  => $profile,
+                'comment'  => 'email:' . $email,
+            ]);
+
+            session()->forget('register_profile');
+
+            return redirect()->route('hotspot.registerSuccess')
+                ->with('reg_name', $name)
+                ->with('reg_email', $email)
+                ->with('reg_username', $username)
+                ->with('reg_password', $password)
+                ->with('reg_profile', $profile);
+
+        } catch (\Exception $e) {
+            session()->forget('register_profile');
+            return redirect("/register-hotspot/{$role}")
+                ->with('error', 'Gagal registrasi via Google: ' . $e->getMessage());
         }
     }
 

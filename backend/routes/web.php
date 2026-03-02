@@ -79,6 +79,8 @@ Route::prefix('register-hotspot')->group(function () {
     Route::get('/staff', [SelfRegisterController::class, 'showForm'])->defaults('role', 'staff');
     Route::get('/tamu', [SelfRegisterController::class, 'showForm'])->defaults('role', 'tamu');
     Route::post('/', [SelfRegisterController::class, 'selfRegister'])->name('hotspot.selfRegister');
+    Route::get('/auth/google', [SelfRegisterController::class, 'redirectToGoogle'])->name('hotspot.googleRegister');
+    Route::get('/success', [SelfRegisterController::class, 'registerSuccess'])->name('hotspot.registerSuccess');
 });
 
 /*
