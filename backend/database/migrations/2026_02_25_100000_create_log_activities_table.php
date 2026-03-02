@@ -10,15 +10,15 @@ return new class extends Migration
     {
         Schema::create('log_activities', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('user_id')->nullable();
             $table->string('username');
             $table->string('role');
-            $table->string('action'); // bisa diubah ke enum jika ingin lebih strict
+            $table->string('action');
             $table->string('ip_address', 45);
             $table->enum('status', ['success', 'failed'])->default('success');
             $table->timestamps();
 
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('set null');
         });
     }
 
