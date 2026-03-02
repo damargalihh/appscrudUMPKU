@@ -14,6 +14,7 @@ Thumbs.db
 # ============================================
 /backend/.env
 /backend/.env.backup
+/backend/.env copy
 /backend/.env.production
 /backend/vendor
 /backend/node_modules
