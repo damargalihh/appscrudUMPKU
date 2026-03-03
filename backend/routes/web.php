@@ -87,6 +87,8 @@ Route::prefix('register-hotspot')->group(function () {
 | Hotspot Login (Google OAuth) — halaman login captive portal WiFi
 */
 Route::get('/hotspot/login', [HotspotController::class, 'showLogin'])->name('hotspot.login');
+Route::get('/hotspot/login/{role}', [HotspotController::class, 'showLoginRole'])->name('hotspot.login.role')
+    ->whereIn('role', ['dosen', 'mahasiswa', 'staff', 'tamu']);
 Route::get('/hotspot/success', [HotspotController::class, 'success'])->name('hotspot.success');
 Route::get('/auth/google', [HotspotController::class, 'redirectToGoogle'])->name('auth.google');
 Route::get('/auth/google/callback', [HotspotController::class, 'handleGoogleCallback'])->name('auth.google.callback');

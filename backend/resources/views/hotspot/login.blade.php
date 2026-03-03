@@ -18,55 +18,47 @@
     <style>
         body { font-family: 'Poppins', sans-serif; }
 
-        /* Google button */
-        .google-btn {
+        .role-card {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            width: 100%;
-            padding: 14px 24px;
-            background: #ffffff;
-            border: 2px solid #e2e8f0;
-            border-radius: 14px;
-            font-size: 15px;
-            font-weight: 600;
-            color: #1a1a2e;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-        }
-        .google-btn:hover {
-            border-color: #4285f4;
-            background: #f8faff;
-            box-shadow: 0 4px 20px rgba(66, 133, 244, 0.15);
-            transform: translateY(-1px);
-        }
-        .google-btn:active { transform: translateY(0); }
-        .google-btn svg { width: 22px; height: 22px; flex-shrink: 0; }
-
-        /* Register button */
-        .register-btn {
-            display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             gap: 10px;
-            width: 100%;
-            padding: 12px 20px;
-            border-radius: 14px;
-            font-size: 14px;
+            padding: 24px 16px;
+            border-radius: 18px;
             font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
+            font-size: 14px;
             text-decoration: none;
+            transition: all 0.3s ease;
+            border: 1.5px solid transparent;
         }
-        .register-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        .role-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
         }
-        .register-btn:active { transform: translateY(0); }
+        .role-card:active { transform: translateY(0); }
 
-        /* Animations */
+        .role-card .role-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: transform 0.3s ease;
+        }
+        .role-card:hover .role-icon { transform: scale(1.1); }
+
+        .card-blue    { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+        .card-blue .role-icon    { background: #dbeafe; color: #2563eb; }
+        .card-emerald { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+        .card-emerald .role-icon { background: #d1fae5; color: #059669; }
+        .card-purple  { background: #f5f3ff; color: #6d28d9; border-color: #c4b5fd; }
+        .card-purple .role-icon  { background: #ede9fe; color: #7c3aed; }
+        .card-amber   { background: #fffbeb; color: #b45309; border-color: #fcd34d; }
+        .card-amber .role-icon   { background: #fef3c7; color: #d97706; }
+
         .wifi-pulse {
             animation: wifi-pulse 2s ease-in-out infinite;
         }
@@ -74,9 +66,7 @@
             0%, 100% { opacity: 0.7; transform: scale(1); }
             50% { opacity: 1; transform: scale(1.06); }
         }
-        .fade-up {
-            animation: fadeUp 0.5s ease-out both;
-        }
+        .fade-up { animation: fadeUp 0.5s ease-out both; }
         .fade-up-delay { animation-delay: 0.15s; }
         .fade-up-delay-2 { animation-delay: 0.3s; }
         .fade-up-delay-3 { animation-delay: 0.45s; }
@@ -85,28 +75,12 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Glass card */
         .glass-card {
             background: rgba(255,255,255,0.92);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             border: 1px solid rgba(255,255,255,0.6);
         }
-
-        /* Network badge & button colors */
-        .badge-blue    { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
-        .badge-emerald { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
-        .badge-purple  { background: #f5f3ff; color: #6d28d9; border-color: #c4b5fd; }
-        .badge-amber   { background: #fffbeb; color: #b45309; border-color: #fcd34d; }
-
-        .btn-blue    { background: #eff6ff; color: #1d4ed8; border: 1.5px solid #bfdbfe; }
-        .btn-blue:hover    { background: #dbeafe; }
-        .btn-emerald { background: #ecfdf5; color: #047857; border: 1.5px solid #a7f3d0; }
-        .btn-emerald:hover { background: #d1fae5; }
-        .btn-purple  { background: #f5f3ff; color: #6d28d9; border: 1.5px solid #c4b5fd; }
-        .btn-purple:hover  { background: #ede9fe; }
-        .btn-amber   { background: #fffbeb; color: #b45309; border: 1.5px solid #fcd34d; }
-        .btn-amber:hover   { background: #fef3c7; }
     </style>
 </head>
 <body class="antialiased">
@@ -142,27 +116,6 @@
                     </div>
                     <h1 class="text-xl sm:text-2xl font-bold text-gray-800 tracking-tight">Login WiFi Hotspot</h1>
                     <p class="text-sm text-gray-500 mt-1">UMPKU Surakarta</p>
-
-                    {{-- Network Badge — tampilkan jika jaringan terdeteksi --}}
-                    @if(!empty($detectedRole) && !empty($roleData))
-                        <div class="mt-3 inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-xs font-semibold badge-{{ $roleData['color'] }}">
-                            <i class="{{ $roleData['icon'] }} text-[11px]"></i>
-                            Jaringan {{ $roleData['label'] }}
-                        </div>
-                    @endif
-                </div>
-
-                {{-- Info Box --}}
-                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100/80 rounded-2xl p-4 mb-6 fade-up fade-up-delay">
-                    <div class="flex items-start gap-3">
-                        <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                            <i class="fas fa-info text-blue-600 text-xs"></i>
-                        </div>
-                        <div class="text-xs text-blue-700 leading-relaxed">
-                            <p class="font-semibold mb-1">Petunjuk Login:</p>
-                            <p>Klik <strong>"Login dengan Google"</strong> di bawah. Sistem akan mencocokkan email Google Anda dengan akun WiFi yang sudah terdaftar.</p>
-                        </div>
-                    </div>
                 </div>
 
                 {{-- Error Message --}}
@@ -179,49 +132,37 @@
                     </div>
                 @endif
 
-                {{-- Google Login Button --}}
-                <div class="fade-up fade-up-delay-2">
-                    <a href="{{ route('auth.google') }}" class="google-btn">
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
-                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                        </svg>
-                        Login dengan Google
-                    </a>
+                {{-- Instruction --}}
+                <div class="text-center mb-5 fade-up fade-up-delay">
+                    <p class="text-xs text-gray-500">Pilih jaringan WiFi yang Anda gunakan</p>
                 </div>
 
-                {{-- Divider --}}
-                <div class="flex items-center gap-3 my-6 fade-up fade-up-delay-3">
-                    <div class="flex-1 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent"></div>
-                    <span class="text-[11px] text-gray-400 font-medium tracking-wide">belum punya akun?</span>
-                    <div class="flex-1 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent"></div>
-                </div>
-
-                {{-- Register Link — otomatis sesuai jaringan --}}
-                <div class="fade-up fade-up-delay-3">
-                    @if(!empty($detectedRole) && !empty($roleData))
-                        <a href="/register-hotspot/{{ $detectedRole }}" class="register-btn btn-{{ $roleData['color'] }}">
-                            <i class="{{ $roleData['icon'] }} text-sm"></i>
-                            Daftar Akun {{ $roleData['label'] }}
-                        </a>
-                    @else
-                        <div class="grid grid-cols-2 gap-2.5">
-                            <a href="/register-hotspot/dosen" class="register-btn text-xs btn-blue">
-                                <i class="fas fa-chalkboard-teacher text-[11px]"></i> Dosen
-                            </a>
-                            <a href="/register-hotspot/mahasiswa" class="register-btn text-xs btn-emerald">
-                                <i class="fas fa-user-graduate text-[11px]"></i> Mahasiswa
-                            </a>
-                            <a href="/register-hotspot/staff" class="register-btn text-xs btn-purple">
-                                <i class="fas fa-id-badge text-[11px]"></i> Staff
-                            </a>
-                            <a href="/register-hotspot/tamu" class="register-btn text-xs btn-amber">
-                                <i class="fas fa-user-tag text-[11px]"></i> Tamu
-                            </a>
+                {{-- Role Selection Grid --}}
+                <div class="grid grid-cols-2 gap-3 fade-up fade-up-delay-2">
+                    <a href="/hotspot/login/dosen" class="role-card card-blue">
+                        <div class="role-icon">
+                            <i class="fas fa-chalkboard-teacher"></i>
                         </div>
-                    @endif
+                        <span>Dosen</span>
+                    </a>
+                    <a href="/hotspot/login/mahasiswa" class="role-card card-emerald">
+                        <div class="role-icon">
+                            <i class="fas fa-user-graduate"></i>
+                        </div>
+                        <span>Mahasiswa</span>
+                    </a>
+                    <a href="/hotspot/login/staff" class="role-card card-purple">
+                        <div class="role-icon">
+                            <i class="fas fa-id-badge"></i>
+                        </div>
+                        <span>Staff</span>
+                    </a>
+                    <a href="/hotspot/login/tamu" class="role-card card-amber">
+                        <div class="role-icon">
+                            <i class="fas fa-user-tag"></i>
+                        </div>
+                        <span>Tamu</span>
+                    </a>
                 </div>
             </div>
 

@@ -40,7 +40,7 @@ class HotspotController extends Controller
     ];
 
     /**
-     * Tampilkan halaman login hotspot (captive portal).
+     * Tampilkan halaman login hotspot (captive portal) — halaman utama pemilih role.
      * MikroTik mengirim params: mac, ip, link-login-only, link-orig, dst, server.
      */
     public function showLogin(Request $request)
@@ -62,12 +62,33 @@ class HotspotController extends Controller
         }
 
         $detectedRole = $this->serverRoleMap[$serverName] ?? null;
-        $roleData     = $detectedRole ? ($this->roleInfo[$detectedRole] ?? null) : null;
 
-        return view('hotspot.login', [
-            'detectedRole' => $detectedRole,
-            'roleData'     => $roleData,
-            'serverName'   => $serverName,
+        // Jika role terdeteksi dari MikroTik, langsung redirect ke halaman login role tersebut
+        if ($detectedRole) {
+            return redirect("/hotspot/login/{$detectedRole}");
+        }
+
+        // Tampilkan halaman pemilih role
+        return view('hotspot.login');
+    }
+
+    /**
+     * Tampilkan halaman login per role (dosen/mahasiswa/staff/tamu).
+     */
+    public function showLoginRole(Request $request, string $role)
+    {
+        $roleData = $this->roleInfo[$role] ?? null;
+
+        if (!$roleData) {
+            return redirect('/hotspot/login');
+        }
+
+        // Simpan role ke session agar callback tahu harus redirect kemana
+        session(['hotspot_login_role' => $role]);
+
+        return view('hotspot.login-role', [
+            'role'     => $role,
+            'roleData' => $roleData,
         ]);
     }
 
@@ -147,13 +168,14 @@ class HotspotController extends Controller
         } catch (\Exception $e) {
             LogActivityHelper::logHotspot('google_login', $email, null, 'failed');
 
-            // Auto-redirect ke halaman register sesuai jaringan yang terdeteksi
+            // Redirect ke halaman login role yang sesuai dengan pesan error
+            $role = session('hotspot_login_role');
             $serverName = strtolower(trim(session('hotspot_server', '')));
-            $detectedRole = $this->serverRoleMap[$serverName] ?? null;
+            $detectedRole = $role ?? ($this->serverRoleMap[$serverName] ?? null);
 
             if ($detectedRole) {
-                return redirect("/register-hotspot/{$detectedRole}")
-                    ->with('error', 'Email tidak ditemukan di daftar user hotspot. Silakan daftar akun baru.');
+                return redirect("/hotspot/login/{$detectedRole}")
+                    ->with('error', 'Login gagal: ' . $e->getMessage());
             }
 
             return redirect('/hotspot/login')->with('error', 'Login gagal: ' . $e->getMessage());
