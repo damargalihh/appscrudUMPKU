@@ -11,8 +11,37 @@ use App\Helpers\LogActivityHelper;
 class HotspotController extends Controller
 {
     /**
+     * Map nama hotspot server MikroTik ke role user.
+     * Sesuaikan key dengan nama server di /ip hotspot.
+     */
+    protected array $serverRoleMap = [
+        'hs-dosen'     => 'dosen',
+        'hs-mahasiswa' => 'mahasiswa',
+        'hs-staff'     => 'staff',
+        'hs-tamu'      => 'tamu',
+        'hotspot-dosen'     => 'dosen',
+        'hotspot-mahasiswa' => 'mahasiswa',
+        'hotspot-staff'     => 'staff',
+        'hotspot-tamu'      => 'tamu',
+        'dosen'        => 'dosen',
+        'mahasiswa'    => 'mahasiswa',
+        'staff'        => 'staff',
+        'tamu'         => 'tamu',
+    ];
+
+    /**
+     * Info visual per role.
+     */
+    protected array $roleInfo = [
+        'dosen'     => ['label' => 'Dosen',     'icon' => 'fas fa-chalkboard-teacher', 'color' => 'blue'],
+        'mahasiswa' => ['label' => 'Mahasiswa', 'icon' => 'fas fa-user-graduate',       'color' => 'emerald'],
+        'staff'     => ['label' => 'Staff',     'icon' => 'fas fa-id-badge',            'color' => 'purple'],
+        'tamu'      => ['label' => 'Tamu',      'icon' => 'fas fa-user-tag',            'color' => 'amber'],
+    ];
+
+    /**
      * Tampilkan halaman login hotspot (captive portal).
-     * MikroTik mengirim params: mac, ip, link-login-only, link-orig, dst.
+     * MikroTik mengirim params: mac, ip, link-login-only, link-orig, dst, server.
      */
     public function showLogin(Request $request)
     {
@@ -26,7 +55,20 @@ class HotspotController extends Controller
             ]);
         }
 
-        return view('hotspot.login');
+        // Deteksi role dari parameter 'server' yang dikirim MikroTik
+        $serverName = strtolower(trim($request->query('server', session('hotspot_server', ''))));
+        if ($serverName) {
+            session(['hotspot_server' => $serverName]);
+        }
+
+        $detectedRole = $this->serverRoleMap[$serverName] ?? null;
+        $roleData     = $detectedRole ? ($this->roleInfo[$detectedRole] ?? null) : null;
+
+        return view('hotspot.login', [
+            'detectedRole' => $detectedRole,
+            'roleData'     => $roleData,
+            'serverName'   => $serverName,
+        ]);
     }
 
     /**
@@ -34,7 +76,6 @@ class HotspotController extends Controller
      */
     public function redirectToGoogle()
     {
-        // Pastikan ini flow login, bukan register
         session()->forget('register_profile');
 
         return Socialite::driver('google')->redirect();
