@@ -28,7 +28,15 @@ class HotspotUserController extends Controller
     public function store(StoreHotspotUserRequest $request, MikrotikService $mt, MikrotikCacheService $cache)
     {
         try {
-            $mt->addHotspotUser($request->validated());
+            $data = $request->validated();
+
+            // Simpan email di comment field MikroTik (untuk pencocokan Google OAuth login)
+            if (!empty($data['email'])) {
+                $data['comment'] = 'email:' . $data['email'];
+            }
+            unset($data['email']);
+
+            $mt->addHotspotUser($data);
             $cache->invalidateUserCaches();
             LogActivityHelper::log('create_hotspot_user', $request->input('name'));
         } catch (\Exception $e) {
@@ -161,7 +169,7 @@ class HotspotUserController extends Controller
                     'name'     => $username,
                     'password' => $password,
                     'profile'  => $profile,
-                    'comment'  => $email,
+                    'comment'  => 'email:' . $email,
                 ]);
                 $successCount++;
             } catch (\Throwable $e) {

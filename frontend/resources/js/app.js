@@ -70,8 +70,9 @@ Alpine.data('hotspotUsersTable', () => ({
 		const searchText = this.search.toLowerCase().trim();
 		return this.users.filter((user) => {
 			const name = (user.name || '').toLowerCase();
+			const email = (user.email || '').toLowerCase();
 			const profile = (user.profile || '').toLowerCase();
-			const matchesSearch = !searchText || name.includes(searchText) || profile.includes(searchText);
+			const matchesSearch = !searchText || name.includes(searchText) || email.includes(searchText) || profile.includes(searchText);
 			const matchesStatus = this.filter === 'all'
 				|| (this.filter === 'active' && !user.disabled)
 				|| (this.filter === 'disabled' && user.disabled);

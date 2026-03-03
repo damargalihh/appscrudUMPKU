@@ -33,12 +33,24 @@ class MikrotikCacheService
         return $this->fetchAndCache('hotspot_users', function () {
             $users = $this->mt->getHotspotUsers();
 
-            return collect($users)->map(fn($u) => [
-                'id'       => $u['.id'] ?? '',
-                'name'     => $u['name'] ?? '-',
-                'profile'  => $u['profile'] ?? '-',
-                'disabled' => ($u['disabled'] ?? 'false') === 'true',
-            ])->values()->all();
+            return collect($users)->map(function ($u) {
+                // Ekstrak email dari comment field (format: 'email:xxx@yyy.com' atau raw email)
+                $email = '';
+                $comment = $u['comment'] ?? '';
+                if (str_starts_with(strtolower($comment), 'email:')) {
+                    $email = trim(substr($comment, 6));
+                } elseif (filter_var($comment, FILTER_VALIDATE_EMAIL)) {
+                    $email = $comment;
+                }
+
+                return [
+                    'id'       => $u['.id'] ?? '',
+                    'name'     => $u['name'] ?? '-',
+                    'email'    => $email,
+                    'profile'  => $u['profile'] ?? '-',
+                    'disabled' => ($u['disabled'] ?? 'false') === 'true',
+                ];
+            })->values()->all();
         });
     }
 

@@ -38,11 +38,16 @@
         </h3>
         <form method="POST" action="{{ route('hotspot.store') }}">
             @csrf
-            <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-2 md:gap-3">
                 <div class="relative">
                     <i class="fas fa-user absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
                     <input type="text" name="name" placeholder="Username"
                            class="w-full pl-8 pr-2 py-2 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition" required>
+                </div>
+                <div class="relative">
+                    <i class="fas fa-envelope absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                    <input type="email" name="email" placeholder="Email (untuk Google Login)"
+                           class="w-full pl-8 pr-2 py-2 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition">
                 </div>
                 <div class="relative">
                     <i class="fas fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
@@ -152,6 +157,7 @@
                         <th class="pl-3 pr-1 py-2.5 w-8"></th>
                         <th class="px-4 py-2.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">#</th>
                         <th class="px-4 py-2.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Username</th>
+                        <th class="px-4 py-2.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Email</th>
                         <th class="px-4 py-2.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Profile</th>
                         <th class="px-4 py-2.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Status</th>
                         <th class="px-4 py-2.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Aksi</th>
@@ -170,6 +176,9 @@
                                          x-text="(user.name || '-').charAt(0).toUpperCase()"></div>
                                     <span class="text-sm font-medium text-gray-800" x-text="user.name"></span>
                                 </div>
+                            </td>
+                            <td class="px-4 py-2.5">
+                                <span class="text-xs text-gray-500" x-text="user.email || '-'"></span>
                             </td>
                             <td class="px-4 py-2.5">
                                 <span class="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded font-medium" x-text="user.profile || '-'"></span>
@@ -237,6 +246,7 @@
                                  x-text="(user.name || '-').charAt(0).toUpperCase()"></div>
                             <div class="min-w-0">
                                 <p class="text-sm font-semibold text-gray-800 truncate" x-text="user.name"></p>
+                                <p class="text-[10px] text-gray-400 truncate" x-show="user.email" x-text="user.email"></p>
                                 <div class="flex items-center gap-1.5 mt-0.5">
                                     <span class="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded font-medium" x-text="user.profile || '-'"></span>
                                     <template x-if="user.disabled">

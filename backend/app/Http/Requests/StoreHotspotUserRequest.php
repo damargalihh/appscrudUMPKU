@@ -15,6 +15,7 @@ class StoreHotspotUserRequest extends FormRequest
     {
         return [
             'name'     => 'required|string',
+            'email'    => 'nullable|email',
             'password' => 'required|string|min:4',
             'profile'  => 'nullable|string',
         ];
