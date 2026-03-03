@@ -192,39 +192,12 @@
                     </a>
                 </div>
 
-                {{-- Divider --}}
-                <div class="flex items-center gap-3 my-6 fade-up fade-up-delay-3">
-                    <div class="flex-1 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent"></div>
-                    <span class="text-[11px] text-gray-400 font-medium tracking-wide uppercase">atau daftar akun</span>
-                    <div class="flex-1 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent"></div>
-                </div>
-
-                {{-- Self Register Link — otomatis sesuai jaringan --}}
-                <div class="fade-up fade-up-delay-3">
-                    @if(!empty($detectedRole) && !empty($roleData))
-                        {{-- Jaringan terdeteksi → tampilkan 1 tombol register sesuai role --}}
-                        <a href="/register-hotspot/{{ $detectedRole }}" class="register-btn btn-{{ $roleData['color'] }}">
-                            <i class="{{ $roleData['icon'] }} text-sm"></i>
-                            Daftar Akun {{ $roleData['label'] }}
-                        </a>
-                    @else
-                        {{-- Jaringan tidak terdeteksi → fallback tampilkan semua pilihan --}}
-                        <div class="grid grid-cols-2 gap-2.5">
-                            <a href="/register-hotspot/dosen" class="register-btn text-xs btn-blue">
-                                <i class="fas fa-chalkboard-teacher text-[11px]"></i> Dosen
-                            </a>
-                            <a href="/register-hotspot/mahasiswa" class="register-btn text-xs btn-emerald">
-                                <i class="fas fa-user-graduate text-[11px]"></i> Mahasiswa
-                            </a>
-                            <a href="/register-hotspot/staff" class="register-btn text-xs btn-purple">
-                                <i class="fas fa-id-badge text-[11px]"></i> Staff
-                            </a>
-                            <a href="/register-hotspot/tamu" class="register-btn text-xs btn-amber">
-                                <i class="fas fa-user-tag text-[11px]"></i> Tamu
-                            </a>
-                        </div>
-                    @endif
-                </div>
+                {{-- Keterangan jaringan terdeteksi --}}
+                @if(!empty($detectedRole) && !empty($roleData))
+                    <div class="mt-5 text-center fade-up fade-up-delay-3">
+                        <p class="text-[11px] text-gray-400">Belum punya akun? Login Google di atas akan otomatis mengarahkan ke pendaftaran.</p>
+                    </div>
+                @endif
             </div>
 
             {{-- Admin Login Link --}}

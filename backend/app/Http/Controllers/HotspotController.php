@@ -147,6 +147,15 @@ class HotspotController extends Controller
         } catch (\Exception $e) {
             LogActivityHelper::logHotspot('google_login', $email, null, 'failed');
 
+            // Auto-redirect ke halaman register sesuai jaringan yang terdeteksi
+            $serverName = strtolower(trim(session('hotspot_server', '')));
+            $detectedRole = $this->serverRoleMap[$serverName] ?? null;
+
+            if ($detectedRole) {
+                return redirect("/register-hotspot/{$detectedRole}")
+                    ->with('error', 'Email tidak ditemukan di daftar user hotspot. Silakan daftar akun baru.');
+            }
+
             return redirect('/hotspot/login')->with('error', 'Login gagal: ' . $e->getMessage());
         }
     }
