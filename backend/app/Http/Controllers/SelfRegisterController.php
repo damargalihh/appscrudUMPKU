@@ -46,16 +46,26 @@ class SelfRegisterController extends Controller
 
     /**
      * Redirect ke Google OAuth untuk registrasi hotspot.
-     * Menyimpan profile ke session agar HotspotController callback bisa mendeteksi flow register.
+     * Menyimpan profile ke session DAN ke state parameter OAuth agar
+     * HotspotController callback bisa mendeteksi flow register
+     * (state param lebih reliable karena tidak bergantung pada session persistence).
      */
     public function redirectToGoogle(Request $request)
     {
         $profile = $request->query('profile', 'TamuMagang');
 
-        // Simpan profile ke session — HotspotController::handleGoogleCallback() akan mengecek ini
+        // Simpan ke session sebagai fallback
         session(['register_profile' => $profile]);
 
-        return Socialite::driver('google')->redirect();
+        // Encode register intent ke state parameter OAuth (primary method)
+        $state = base64_encode(json_encode([
+            'intent'  => 'register',
+            'profile' => $profile,
+        ]));
+
+        return Socialite::driver('google')
+            ->with(['state' => $state])
+            ->redirect();
     }
 
     /**
