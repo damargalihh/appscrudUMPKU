@@ -370,13 +370,6 @@
                     <i class="{{ $roleData['icon'] }}"></i> Buat Akun {{ $roleData['label'] }}
                 </a>
 
-                {{-- Back link --}}
-                <div class="back-link">
-                    <a href="/hotspot/login">
-                        <i class="fas fa-arrow-left"></i> Pilih Jaringan Lain
-                    </a>
-                </div>
-
                 <div class="footer-link">
                     <a href="#contact">Butuh bantuan?</a>
                 </div>

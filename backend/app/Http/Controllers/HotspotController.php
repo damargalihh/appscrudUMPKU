@@ -70,8 +70,7 @@ class HotspotController extends Controller
         }
 
         // Tidak boleh akses langsung tanpa parameter server dari MikroTik
-        // Redirect ke halaman utama atau tampilkan 403
-        abort(403, 'Akses ditolak. Halaman ini hanya bisa diakses melalui jaringan WiFi Hotspot UMPKU.');
+        abort(404);
     }
 
     /**
