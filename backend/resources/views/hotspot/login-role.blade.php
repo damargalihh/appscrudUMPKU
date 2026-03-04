@@ -20,6 +20,7 @@
             'tamu'      => ['primary' => '#E65100', 'secondary' => '#FF9800', 'accent' => '#FFB74D', 'gradient' => 'linear-gradient(90deg, #f59e0b, #e85d04)'],
         ];
         $rc = $roleColors[$role] ?? $roleColors['tamu'];
+        $isCompact = in_array($role, ['dosen', 'staff']);
     @endphp
 
     <style>
@@ -51,7 +52,7 @@
             position: absolute; top: 0; left: 0;
             width: 100%; height: 100%;
             background-size: cover; background-position: center;
-            opacity: 0; transition: opacity 1.5s ease-in-out;
+            opacity: 0;
         }
         .wallpaper-bg .slide:nth-child(1) {
             background-image: url('{{ asset('img/wp1.jpg') }}');
@@ -59,14 +60,24 @@
         }
         .wallpaper-bg .slide:nth-child(2) {
             background-image: url('{{ asset('img/wp2.jpg') }}');
+            @if($isCompact)
+            display: none;
+            @else
             opacity: 0;
+            transition: opacity 1.5s ease-in-out;
+            @endif
         }
         .overlay-bg {
             position: fixed; top: 0; left: 0;
             width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.75);
+            background: rgba(255, 255, 255, {{ $isCompact ? '0.7' : '0.75' }});
             z-index: -1;
         }
+
+        @if(!$isCompact)
+        /* ============================================
+           FULL LAYOUT (Mahasiswa & Tamu)
+           ============================================ */
 
         /* Navbar */
         .navbar {
@@ -77,11 +88,11 @@
             border-bottom: 1px solid rgba(0, 0, 0, 0.1);
             box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
         }
-        .navbar-brand { display: flex; align-items: center; }
+        .navbar-brand { display: flex; align-items: center; text-decoration: none; }
         .navbar-brand img { height: 45px; width: auto; }
         .nav-menu { display: flex; align-items: center; gap: 10px; }
         .nav-link {
-            color: var(--text-dark); padding: 10px 25px;
+            color: var(--text-dark); text-decoration: none; padding: 10px 25px;
             font-weight: 500; font-size: 14px;
             transition: all 0.3s ease;
             display: flex; align-items: center; gap: 8px;
@@ -105,12 +116,12 @@
             position: relative; z-index: 1;
         }
 
-        /* Login Wrapper */
+        /* Login Wrapper (Full Layout with Logo Side) */
         .login-wrapper {
             display: flex; align-items: center; justify-content: center;
             gap: 80px; max-width: 1100px; width: 100%;
         }
-        .logo-side { flex: 1; text-align: center; }
+        .logo-side { flex: 1; text-align: center; color: var(--white); }
         .logo-side .main-logo {
             width: 380px; max-width: 90%; height: auto;
             margin-bottom: 20px;
@@ -122,80 +133,6 @@
             text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3);
             letter-spacing: 2px;
         }
-
-        /* Login Container */
-        .login-container {
-            max-width: 420px; width: 100%;
-            background: #ffffff; border-radius: 18px;
-            padding: 28px 26px 26px;
-            box-shadow: 0 18px 45px rgba(0, 0, 0, 0.12);
-            border: 1px solid rgba(0, 0, 0, 0.06);
-        }
-        .login-header { text-align: center; margin-bottom: 16px; }
-        .login-header h2 {
-            font-size: 16px; font-weight: 600;
-            color: var(--text-dark); margin-bottom: 2px;
-        }
-        .login-header p { font-size: 12px; color: var(--text-light); }
-
-        /* Buttons */
-        .btn-register {
-            display: block; width: 100%; padding: 12px;
-            background: transparent;
-            border: 2px solid var(--primary); border-radius: 8px;
-            color: var(--primary);
-            font-size: 14px; font-weight: 600;
-            font-family: 'Poppins', sans-serif;
-            text-align: center; margin-top: 12px;
-        }
-        .btn-register:hover { background: var(--primary); color: #fff; }
-
-        /* Google Auth Button */
-        .google-auth-wrapper { text-align: center; margin-top: 12px; }
-        .btn-google {
-            display: inline-flex; align-items: center; justify-content: center;
-            width: 100%; padding: 12px 16px;
-            background: #ffffff; color: #444444;
-            border: 1px solid #dadce0; border-radius: 8px;
-            font-size: 15px; font-weight: 500;
-            font-family: 'Poppins', sans-serif;
-            cursor: pointer; transition: all 0.3s ease;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-        }
-        .btn-google svg {
-            width: 20px; height: 20px;
-            vertical-align: middle; margin-right: 10px; flex-shrink: 0;
-        }
-        .btn-google:hover {
-            background: #f7f8f8; border-color: #c6c6c6;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-        }
-
-        /* Error Message */
-        .error-message {
-            background: rgba(244, 67, 54, 0.1);
-            border-radius: 10px;
-            padding: 12px 15px; margin-top: 20px;
-            display: flex; align-items: center; gap: 10px;
-            border: 1px solid rgba(244, 67, 54, 0.3);
-        }
-        .error-message i { color: var(--error); font-size: 18px; }
-        .error-message span { color: #b91c1c; font-size: 13px; font-weight: 500; }
-
-        /* Footer & Links */
-        .footer-link { text-align: center; margin-top: 20px; }
-        .footer-link a { color: var(--text-light); font-size: 13px; font-weight: 500; }
-        .footer-link a:hover { color: var(--primary); text-decoration: underline; }
-        .back-link { text-align: center; margin-top: 12px; }
-        .back-link a {
-            color: var(--text-light); font-size: 12px; font-weight: 500;
-            display: inline-flex; align-items: center; gap: 6px;
-        }
-        .back-link a:hover { color: var(--primary); }
-        .main-footer {
-            background: var(--text-dark); padding: 20px; text-align: center;
-        }
-        .main-footer p { color: rgba(255, 255, 255, 0.7); font-size: 13px; }
 
         /* Contact Section */
         #contact { background: rgba(255, 255, 255, 0.95); min-height: 100vh; }
@@ -227,6 +164,13 @@
         }
         .social-link:hover { background: #f0f0f0; border-bottom-color: var(--accent); }
 
+        /* Footer & Links */
+        .footer-link { text-align: center; margin-top: 20px; }
+        .footer-link a { color: var(--accent); text-decoration: none; font-size: 13px; font-weight: 500; }
+        .footer-link a:hover { color: var(--white); text-decoration: underline; }
+        .main-footer { background: var(--text-dark); padding: 20px; text-align: center; }
+        .main-footer p { color: rgba(255, 255, 255, 0.7); font-size: 13px; }
+
         /* Responsive - Tablet */
         @media (max-width: 900px) {
             .navbar { padding: 12px 20px; }
@@ -236,22 +180,25 @@
             .logo-side .main-logo { width: 180px !important; height: auto !important; }
             .logo-side .tagline { font-size: 14px; letter-spacing: 1px; }
             .login-container { order: 2; max-width: 100%; padding: 25px 20px; }
+            .login-header { margin-bottom: 20px; }
             .login-header h2 { font-size: 22px; }
+            .login-header p { font-size: 12px; }
             #contact { padding: 80px 15px 25px; min-height: auto; }
-            .contact-header { margin-bottom: 20px; }
+            .contact-wrapper { padding: 0 10px; }
+            .contact-header { margin-bottom: 20px; text-align: center; }
             .contact-header h2 { font-size: 22px; color: var(--primary); }
-            .contact-header p { font-size: 12px; }
+            .contact-header p { font-size: 12px; padding: 0 10px; color: var(--text-light); }
             .contact-content { flex-direction: column; gap: 18px; }
             .contact-map { min-height: 160px; max-height: 180px; border-radius: 12px; }
             .contact-info { gap: 12px; }
-            .contact-card { padding: 14px 16px; gap: 14px; border-radius: 12px; }
-            .contact-icon { width: 44px; height: 44px; min-width: 44px; border-radius: 12px; }
+            .contact-card { padding: 14px 16px; gap: 14px; border-radius: 12px; background: #fff; border: 1px solid rgba(0, 0, 0, 0.08); }
+            .contact-icon { width: 44px; height: 44px; min-width: 44px; border-radius: 12px; background: var(--primary); display: flex; align-items: center; justify-content: center; }
             .contact-icon img { width: 22px !important; height: 22px !important; filter: brightness(0) invert(1); }
-            .contact-details h4 { font-size: 14px; margin-bottom: 3px; }
-            .contact-details p { font-size: 12px; line-height: 1.5; }
-            .social-section { margin-top: 18px; padding-top: 18px; }
-            .social-links { gap: 8px; }
-            .social-link { padding: 8px 16px; font-size: 11px; border-radius: 20px; background: #f5f5f5; }
+            .contact-details h4 { font-size: 14px; font-weight: 600; color: var(--text-dark); margin-bottom: 3px; }
+            .contact-details p { font-size: 12px; line-height: 1.5; color: var(--text-light); }
+            .social-section { margin-top: 18px; padding-top: 18px; border-top: 1px solid rgba(0,0,0,0.08); }
+            .social-links { gap: 8px; justify-content: center; flex-wrap: wrap; }
+            .social-link { padding: 8px 16px; font-size: 11px; border-radius: 20px; background: #f5f5f5; border: 1px solid rgba(0,0,0,0.05); font-weight: 500; }
             .main-footer { padding: 15px 10px; }
             .main-footer p { font-size: 11px; }
         }
@@ -261,6 +208,7 @@
             .navbar { padding: 8px 12px; }
             .navbar-brand img { height: 32px; }
             .nav-link { padding: 6px 10px; font-size: 11px; gap: 4px; }
+            .nav-link i { font-size: 14px; }
             .nav-link span { display: none; }
             #home { padding-top: 70px; min-height: 100vh; }
             #contact { padding: 70px 10px 30px; }
@@ -268,22 +216,28 @@
             .logo-side .main-logo { width: 140px !important; }
             .logo-side .tagline { font-size: 12px; margin-top: -5px; }
             .login-container { padding: 20px 18px; }
+            .login-header { margin-bottom: 18px; }
             .login-header h2 { font-size: 20px; }
             .error-message { padding: 10px 12px; margin-top: 15px; }
             .error-message span { font-size: 12px; }
             .footer-link { margin-top: 15px; }
             .footer-link a { font-size: 12px; }
-            .contact-header h2 { font-size: 20px; }
-            .contact-header p { font-size: 11px; }
+            .page-section { padding: 90px 15px 30px; }
+            .contact-header h2 { font-size: 20px; color: var(--primary); }
+            .contact-header p { font-size: 11px; color: var(--text-light); }
             .contact-content { gap: 14px; }
             .contact-map { min-height: 140px; max-height: 160px; border-radius: 10px; }
-            .contact-card { padding: 12px 14px; gap: 12px; border-radius: 10px; }
-            .contact-icon { width: 40px; height: 40px; min-width: 40px; border-radius: 10px; }
+            .contact-info { gap: 10px; }
+            .contact-card { padding: 12px 14px; gap: 12px; border-radius: 10px; background: #fff; border: 1px solid rgba(0, 0, 0, 0.08); }
+            .contact-icon { width: 40px; height: 40px; min-width: 40px; border-radius: 10px; background: var(--primary); }
             .contact-icon img { width: 20px !important; height: 20px !important; filter: brightness(0) invert(1); }
-            .contact-details h4 { font-size: 13px; margin-bottom: 2px; }
-            .contact-details p { font-size: 11px; line-height: 1.4; }
+            .contact-details { flex: 1; }
+            .contact-details h4 { font-size: 13px; font-weight: 600; margin-bottom: 2px; color: var(--text-dark); }
+            .contact-details p { font-size: 11px; line-height: 1.4; color: var(--text-light); }
             .contact-details p br { display: none; }
-            .social-link { padding: 7px 14px; font-size: 10px; border-radius: 18px; }
+            .social-section { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(0,0,0,0.06); }
+            .social-links { gap: 6px; flex-wrap: wrap; }
+            .social-link { padding: 7px 14px; font-size: 10px; border-radius: 18px; background: #f5f5f5; border: 1px solid rgba(0,0,0,0.04); font-weight: 500; }
             .main-footer { padding: 12px 8px; }
             .main-footer p { font-size: 10px; }
         }
@@ -293,19 +247,128 @@
             .logo-side .tagline { font-size: 10px; }
             .login-container { padding: 18px 15px; }
             .login-header h2 { font-size: 18px; }
+            #contact { padding: 65px 10px 20px; }
+            .contact-header { margin-bottom: 14px; }
             .contact-header h2 { font-size: 18px; }
             .contact-header p { font-size: 10px; }
-            .contact-map { min-height: 120px; max-height: 140px; }
-            .contact-card { padding: 10px 12px; gap: 10px; }
-            .contact-icon { width: 36px; height: 36px; min-width: 36px; }
+            .contact-map { min-height: 120px; max-height: 140px; border-radius: 8px; }
+            .contact-info { gap: 8px; }
+            .contact-card { padding: 10px 12px; gap: 10px; border-radius: 8px; }
+            .contact-icon { width: 36px; height: 36px; min-width: 36px; border-radius: 8px; }
+            .contact-icon img { width: 18px !important; height: 18px !important; }
             .contact-details h4 { font-size: 12px; }
             .contact-details p { font-size: 10px; }
-            .social-link { padding: 6px 12px; font-size: 9px; }
+            .social-link { padding: 6px 12px; font-size: 9px; border-radius: 15px; }
         }
+        @else
+        /* ============================================
+           COMPACT LAYOUT (Dosen & Staff)
+           ============================================ */
+
+        /* Page Section */
+        .page-section {
+            min-height: 100vh;
+            display: flex; justify-content: center; align-items: center;
+            padding: 40px 16px;
+            position: relative; z-index: 1;
+        }
+
+        /* Login Wrapper (Simple Card Layout) */
+        .login-wrapper {
+            width: 100%; display: flex;
+            justify-content: center; align-items: center;
+        }
+
+        /* Login Logo inside card */
+        .login-logo {
+            display: block; width: 140px; height: auto;
+            margin: 0 auto 12px;
+        }
+
+        /* Responsive - Compact */
+        @media (max-width: 480px) {
+            .login-container { padding: 22px 18px 20px; }
+            .login-logo { width: 120px; }
+            .login-header h2 { font-size: 14px; }
+            .error-message { padding: 10px 12px; margin-top: 15px; }
+            .error-message i { font-size: 16px; }
+            .error-message span { font-size: 12px; }
+        }
+
+        @media (max-width: 360px) {
+            .login-container { padding: 18px 15px; }
+            .login-logo { width: 100px; }
+            .login-header h2 { font-size: 13px; }
+        }
+        @endif
+
+        /* ============================================
+           SHARED STYLES (Both Layouts)
+           ============================================ */
+
+        /* Login Container */
+        .login-container {
+            max-width: 420px; width: 100%;
+            background: #ffffff; border-radius: 18px;
+            padding: 28px 26px 26px;
+            box-shadow: 0 18px 45px rgba(0, 0, 0, 0.12);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+        }
+        .login-header { text-align: center; margin-bottom: 16px; }
+        .login-header h2 {
+            font-size: 16px; font-weight: 600;
+            color: var(--text-dark); margin-bottom: 2px;
+        }
+        .login-header p { font-size: 12px; color: var(--text-light); }
+
+        /* Buttons */
+        .btn-register {
+            display: block; width: 100%; padding: 12px;
+            background: transparent;
+            border: 2px solid var(--primary); border-radius: 8px;
+            color: var(--primary);
+            font-size: 14px; font-weight: 600;
+            font-family: 'Poppins', sans-serif;
+            text-align: center; text-decoration: none; margin-top: 12px;
+        }
+        .btn-register:hover { background: var(--primary); color: #fff; }
+
+        /* Google Auth Button */
+        .google-auth-wrapper { text-align: center; margin-top: 12px; }
+        .btn-google {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 100%; padding: 12px 16px;
+            background: #ffffff; color: #444444;
+            border: 1px solid #dadce0; border-radius: 8px;
+            font-size: 15px; font-weight: 500;
+            font-family: 'Poppins', sans-serif;
+            text-decoration: none; cursor: pointer; transition: all 0.3s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+        .btn-google img {
+            width: 20px; height: 20px;
+            vertical-align: middle; margin-right: 10px; object-fit: contain;
+        }
+        .btn-google:hover {
+            background: #f7f8f8; border-color: #c6c6c6;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        }
+        .btn-google:active { background: #eeeeee; }
+
+        /* Error Message */
+        .error-message {
+            background: rgba(244, 67, 54, 0.1);
+            border-radius: 10px;
+            padding: 12px 15px; margin-top: 20px;
+            display: flex; align-items: center; gap: 10px;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+        .error-message i { color: var(--error); font-size: 18px; }
+        .error-message span { color: #b91c1c; font-size: 13px; font-weight: 500; }
     </style>
 </head>
 
-<body>
+<body class="{{ $isCompact ? 'role-login' : 'role-login-form' }}">
     <!-- Wallpaper Background -->
     <div class="wallpaper-bg">
         <div class="slide"></div>
@@ -313,9 +376,10 @@
     </div>
     <div class="overlay-bg"></div>
 
-    <!-- Navbar -->
+    @if(!$isCompact)
+    <!-- Navbar (Mahasiswa & Tamu only) -->
     <nav class="navbar">
-        <a href="/hotspot/login" class="navbar-brand">
+        <a href="#home" class="navbar-brand">
             <img src="{{ asset('img/logo_web_umpku_color.png') }}" alt="Logo UMPKU Surakarta">
         </a>
         <div class="nav-menu">
@@ -329,16 +393,25 @@
             </a>
         </div>
     </nav>
+    @endif
 
     <!-- Login Section -->
     <section id="home" class="page-section">
         <div class="login-wrapper">
+            @if(!$isCompact)
+            {{-- Logo Side (Mahasiswa & Tamu only) --}}
             <div class="logo-side">
                 <img src="{{ asset('img/logoutama.png') }}" alt="Logo UMPKU" class="main-logo">
                 <p class="tagline">&bull; New Era, New Vibes &bull;</p>
             </div>
+            @endif
 
             <div class="login-container">
+                @if($isCompact)
+                {{-- Logo inside card (Dosen & Staff) --}}
+                <img src="{{ asset('img/logoutama.png') }}" alt="Logo UMPKU" class="login-logo">
+                @endif
+
                 <div class="login-header">
                     <h2>Login {{ $roleData['label'] }}</h2>
                     <p>UMPKU Surakarta - {{ $roleData['label'] }}</p>
@@ -355,29 +428,27 @@
                 {{-- Google Login Button --}}
                 <div class="google-auth-wrapper" style="margin-top: 16px;">
                     <a href="{{ route('auth.google') }}" class="btn-google">
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
-                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                        </svg>
-                        Login dengan Google
+                        <img src="{{ asset('img/google_logo.png') }}" alt="Google"> Login dengan Google
                     </a>
                 </div>
 
                 {{-- Register Link --}}
-                <a href="/register-hotspot/{{ $role }}" class="btn-register">
-                    <i class="{{ $roleData['icon'] }}"></i> Buat Akun {{ $roleData['label'] }}
+                <a href="/register-hotspot/{{ $role }}" class="btn-register" target="_blank">
+                    Buat Akun
                 </a>
 
+                @if(!$isCompact)
+                {{-- Footer link (Mahasiswa & Tamu only) --}}
                 <div class="footer-link">
                     <a href="#contact">Butuh bantuan?</a>
                 </div>
+                @endif
             </div>
         </div>
     </section>
 
-    <!-- Contact Section -->
+    @if(!$isCompact)
+    <!-- Contact Section (Mahasiswa & Tamu only) -->
     <section id="contact" class="page-section">
         <div class="contact-wrapper">
             <div class="contact-header">
@@ -439,9 +510,11 @@
     <footer class="main-footer">
         <p>&copy; {{ date('Y') }} UMPKU Surakarta. Powered by Tim IT UMPKU</p>
     </footer>
+    @endif
 
     <script>
-        // Wallpaper slideshow
+        @if(!$isCompact)
+        // Wallpaper slideshow (Mahasiswa & Tamu only)
         (function() {
             var slides = document.querySelectorAll('.wallpaper-bg .slide');
             if (slides.length < 2) return;
@@ -471,6 +544,7 @@
                 }
             });
         });
+        @endif
     </script>
 </body>
 </html>
