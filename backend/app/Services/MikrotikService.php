@@ -573,4 +573,17 @@ class MikrotikService
 
         return $hosts[0] ?? null;
     }
+
+    /**
+     * TAMBAH IP-BINDING (BYPASS)
+     */
+    public function addIpBinding(string $macAddress, string $type, string $comment): void
+    {
+        $this->client()->query(
+            (new Query('/ip/hotspot/ip-binding/add'))
+                ->equal('mac-address', $macAddress)
+                ->equal('type', $type)
+                ->equal('comment', $comment)
+        )->read();
+    }
 }

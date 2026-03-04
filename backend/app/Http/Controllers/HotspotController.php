@@ -206,6 +206,7 @@ class HotspotController extends Controller
     /**
      * Handle Google OAuth LOGIN flow.
      * Cocokkan email Google dengan user hotspot MikroTik yang sudah ada.
+     * Lalu login ke MikroTik hotspot via link-login-only (auto-POST credentials).
      */
     private function handleGoogleLogin(Request $request, MikrotikService $mikrotik)
     {
@@ -228,28 +229,62 @@ class HotspotController extends Controller
                 }
             }
 
-            // Cocokkan email dengan user hotspot MikroTik
-            $hotspotUser = $mikrotik->connectUser($email, $macAddress);
+            // Cari user hotspot berdasarkan email
+            $hotspotUser = $mikrotik->findHotspotUserByEmail($email);
+
+            if (!$hotspotUser) {
+                throw new \RuntimeException('Email tidak ditemukan di daftar user hotspot MikroTik.');
+            }
+
+            // Jika user disabled, aktifkan dulu
+            if (($hotspotUser['disabled'] ?? 'false') === 'true') {
+                $mikrotik->enableUser($hotspotUser['.id']);
+            }
+
+            $username = $hotspotUser['name'] ?? $email;
+
+            // Set temporary password untuk login ke MikroTik hotspot
+            $tempPassword = Str::random(12);
+            $mikrotik->resetPassword($hotspotUser['.id'], $tempPassword);
+
+            \Log::info('[Hotspot] Google login: temp password set for MikroTik hotspot login', [
+                'username' => $username,
+                'email'    => $email,
+            ]);
+
+            // Tetap buat IP-binding bypass sebagai fallback
+            if ($macAddress) {
+                try {
+                    $mikrotik->removeGoogleOAuthBindings($macAddress);
+                    $mikrotik->addIpBinding($macAddress, 'bypassed', 'google-oauth:' . $email);
+                } catch (\Exception $e) {
+                    // IP-binding gagal bukan masalah fatal — login via credentials tetap jalan
+                }
+            }
 
             // Log berhasil
             LogActivityHelper::logHotspot(
                 'google_login',
                 $email,
-                $hotspotUser['name'] ?? $email,
+                $username,
                 'success'
             );
 
-            // Bersihkan session captive portal
-            $linkOrig = session('hotspot_link_orig');
+            // Ambil link_login dari session (disimpan saat MikroTik redirect ke captive portal)
+            $linkLogin = session('hotspot_link_login');
+            $linkOrig  = session('hotspot_link_orig');
+
             session()->forget(['hotspot_mac', 'hotspot_ip', 'hotspot_link_login', 'hotspot_link_orig']);
 
             return redirect('/hotspot/success')->with([
-                'login_success' => true,
-                'email'         => $email,
-                'google_name'   => $name,
-                'username'      => $hotspotUser['name'] ?? $email,
-                'profile'       => $hotspotUser['profile'] ?? 'default',
-                'link_orig'     => $linkOrig,
+                'login_success'  => true,
+                'email'          => $email,
+                'google_name'    => $name,
+                'username'       => $username,
+                'password'       => $tempPassword,
+                'profile'        => $hotspotUser['profile'] ?? 'default',
+                'link_login'     => $linkLogin,
+                'link_orig'      => $linkOrig,
             ]);
 
         } catch (\Exception $e) {
