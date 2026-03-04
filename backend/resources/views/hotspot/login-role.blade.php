@@ -325,13 +325,13 @@
         .btn-register {
             display: block; width: 100%; padding: 12px;
             background: transparent;
-            border: 2px solid var(--primary); border-radius: 8px;
-            color: var(--primary);
+            border: 2px solid #e85d04; border-radius: 8px;
+            color: #e85d04;
             font-size: 14px; font-weight: 600;
             font-family: 'Poppins', sans-serif;
             text-align: center; text-decoration: none; margin-top: 12px;
         }
-        .btn-register:hover { background: var(--primary); color: #fff; }
+        .btn-register:hover { background: linear-gradient(90deg, #f59e0b, #e85d04); color: #fff; border-color: #f59e0b; }
 
         /* Google Auth Button */
         .google-auth-wrapper { text-align: center; margin-top: 12px; }
