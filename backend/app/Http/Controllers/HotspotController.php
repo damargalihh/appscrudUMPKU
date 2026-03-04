@@ -69,8 +69,9 @@ class HotspotController extends Controller
             return redirect("/hotspot/login/{$detectedRole}");
         }
 
-        // Tampilkan halaman pemilih role
-        return view('hotspot.login');
+        // Tidak boleh akses langsung tanpa parameter server dari MikroTik
+        // Redirect ke halaman utama atau tampilkan 403
+        abort(403, 'Akses ditolak. Halaman ini hanya bisa diakses melalui jaringan WiFi Hotspot UMPKU.');
     }
 
     /**
@@ -150,7 +151,9 @@ class HotspotController extends Controller
         // Jika Google mengembalikan error
         if ($request->has('error')) {
             \Log::error('[Hotspot] Google returned error', ['error' => $request->query('error')]);
-            return redirect('/hotspot/login')->with('error', 'Google OAuth gagal: ' . $request->query('error'));
+            $errorRole = session('hotspot_login_role');
+            $errorRedirect = $errorRole ? "/hotspot/login/{$errorRole}" : '/hotspot/login';
+            return redirect($errorRedirect)->with('error', 'Google OAuth gagal: ' . $request->query('error'));
         }
 
         // Decode state parameter dari Google redirect (UTAMA, tidak bergantung session)
