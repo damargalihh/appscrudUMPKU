@@ -104,18 +104,25 @@ class HotspotController extends Controller
         // Hapus register_profile agar callback tidak salah deteksi
         session()->forget('register_profile');
 
-        // Encode login intent ke state parameter (primary method, tidak bergantung session)
+        // Encode SEMUA data yang dibutuhkan ke state parameter
+        // Ini KRITIS: session bisa hilang saat redirect ke Google (domain berbeda, SameSite cookie, dll)
+        // State parameter akan di-pass oleh Google kembali ke callback URL
         $state = base64_encode(json_encode([
-            'intent' => 'login',
-            'role'   => $role,
+            'intent'     => 'login',
+            'role'       => $role,
+            'link_login' => session('hotspot_link_login'),
+            'link_orig'  => session('hotspot_link_orig'),
+            'mac'        => session('hotspot_mac'),
+            'ip'         => session('hotspot_ip'),
         ]));
 
         \Log::info('[Hotspot] Login redirectToGoogle', [
-            'role'  => $role,
-            'state' => $state,
+            'role'       => $role,
+            'link_login' => session('hotspot_link_login'),
+            'mac'        => session('hotspot_mac'),
+            'ip'         => session('hotspot_ip'),
         ]);
 
-        // stateless() agar Socialite tidak mencoba menulis session (mencegah error jika DB session bermasalah)
         return Socialite::driver('google')
             ->stateless()
             ->with(['state' => $state])
@@ -156,10 +163,28 @@ class HotspotController extends Controller
         $profile = $stateData['profile'] ?? session('register_profile');
         $role    = $stateData['role'] ?? session('hotspot_login_role');
 
+        // RESTORE hotspot params dari state ke session
+        // State parameter survive Google OAuth redirect, session mungkin tidak
+        if (!empty($stateData['link_login'])) {
+            session(['hotspot_link_login' => $stateData['link_login']]);
+        }
+        if (!empty($stateData['link_orig'])) {
+            session(['hotspot_link_orig' => $stateData['link_orig']]);
+        }
+        if (!empty($stateData['mac'])) {
+            session(['hotspot_mac' => $stateData['mac']]);
+        }
+        if (!empty($stateData['ip'])) {
+            session(['hotspot_ip' => $stateData['ip']]);
+        }
+
         \Log::info('[Hotspot] Flow decision', [
-            'intent'  => $intent,
-            'profile' => $profile,
-            'role'    => $role,
+            'intent'     => $intent,
+            'profile'    => $profile,
+            'role'       => $role,
+            'link_login' => session('hotspot_link_login'),
+            'mac'        => session('hotspot_mac'),
+            'ip'         => session('hotspot_ip'),
         ]);
 
         // REGISTER FLOW: jika intent = register DAN profile terdeteksi
