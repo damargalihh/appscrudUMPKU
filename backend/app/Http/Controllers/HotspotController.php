@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 use App\Services\MikrotikService;
+use App\Services\MikrotikCacheService;
 use App\Helpers\LogActivityHelper;
 
 class HotspotController extends Controller
@@ -94,49 +95,94 @@ class HotspotController extends Controller
 
     /**
      * Redirect ke Google OAuth (LOGIN flow).
+     * Menggunakan stateless() agar tidak bergantung pada session saat redirect.
      */
     public function redirectToGoogle()
     {
+        $role = session('hotspot_login_role', 'tamu');
+
+        // Hapus register_profile agar callback tidak salah deteksi
         session()->forget('register_profile');
 
-        // Encode login intent ke state parameter (agar callback bisa bedakan login vs register)
+        // Encode login intent ke state parameter (primary method, tidak bergantung session)
         $state = base64_encode(json_encode([
             'intent' => 'login',
-            'role'   => session('hotspot_login_role'),
+            'role'   => $role,
         ]));
 
+        \Log::info('[Hotspot] Login redirectToGoogle', [
+            'role'  => $role,
+            'state' => $state,
+        ]);
+
+        // stateless() agar Socialite tidak mencoba menulis session (mencegah error jika DB session bermasalah)
         return Socialite::driver('google')
+            ->stateless()
             ->with(['state' => $state])
             ->redirect();
     }
 
     /**
      * Handle callback dari Google OAuth.
-     * Mendeteksi flow register atau login berdasarkan state parameter + session.
+     * Mendeteksi flow register atau login berdasarkan state parameter (primary) + session (fallback).
      */
     public function handleGoogleCallback(Request $request, MikrotikService $mikrotik)
     {
-        // Decode state parameter dari Google redirect (lebih reliable dari session)
-        $stateData = $this->decodeOAuthState($request->query('state'));
+        $rawState = $request->query('state', '');
 
-        // Jika state mengandung register intent, restore ke session
-        if (($stateData['intent'] ?? null) === 'register' && !empty($stateData['profile'])) {
-            session(['register_profile' => $stateData['profile']]);
-            \Log::info('[Hotspot] OAuth callback: register intent detected from state param', [
-                'profile' => $stateData['profile'],
-            ]);
+        \Log::info('[Hotspot] === OAuth CALLBACK HIT ===', [
+            'url'             => $request->fullUrl(),
+            'has_code'        => $request->has('code'),
+            'has_error'       => $request->has('error'),
+            'error_msg'       => $request->query('error'),
+            'state_raw'       => $rawState,
+            'session_profile' => session('register_profile'),
+            'session_role'    => session('hotspot_login_role'),
+        ]);
+
+        // Jika Google mengembalikan error
+        if ($request->has('error')) {
+            \Log::error('[Hotspot] Google returned error', ['error' => $request->query('error')]);
+            return redirect('/hotspot/login')->with('error', 'Google OAuth gagal: ' . $request->query('error'));
         }
 
-        // Jika state mengandung login role, restore ke session
-        if (($stateData['intent'] ?? null) === 'login' && !empty($stateData['role'])) {
-            session(['hotspot_login_role' => $stateData['role']]);
-        }
+        // Decode state parameter dari Google redirect (UTAMA, tidak bergantung session)
+        $stateData = $this->decodeOAuthState($rawState);
 
-        // Cek apakah ini flow registrasi
-        if (session('register_profile')) {
+        \Log::info('[Hotspot] State decoded', ['stateData' => $stateData]);
+
+        // Tentukan intent: dari state (primary) atau session (fallback)
+        $intent  = $stateData['intent'] ?? null;
+        $profile = $stateData['profile'] ?? session('register_profile');
+        $role    = $stateData['role'] ?? session('hotspot_login_role');
+
+        \Log::info('[Hotspot] Flow decision', [
+            'intent'  => $intent,
+            'profile' => $profile,
+            'role'    => $role,
+        ]);
+
+        // REGISTER FLOW: jika intent = register DAN profile terdeteksi
+        if ($intent === 'register' && !empty($profile)) {
+            session(['register_profile' => $profile]);
+            \Log::info('[Hotspot] >>> Entering REGISTER flow', ['profile' => $profile]);
             return $this->handleGoogleRegister($mikrotik);
         }
 
+        // FALLBACK: jika tidak ada intent tapi ada register_profile di session
+        if (!$intent && session('register_profile')) {
+            \Log::info('[Hotspot] >>> Entering REGISTER flow via session fallback', [
+                'profile' => session('register_profile'),
+            ]);
+            return $this->handleGoogleRegister($mikrotik);
+        }
+
+        // LOGIN FLOW
+        if ($role) {
+            session(['hotspot_login_role' => $role]);
+        }
+
+        \Log::info('[Hotspot] >>> Entering LOGIN flow', ['role' => $role]);
         return $this->handleGoogleLogin($request, $mikrotik);
     }
 
@@ -289,6 +335,14 @@ class HotspotController extends Controller
                 'username' => $username,
                 'result'   => $result,
             ]);
+
+            // Invalidate cache agar user baru muncul di halaman manajemen
+            try {
+                app(MikrotikCacheService::class)->invalidateUserCaches();
+                \Log::info('[Hotspot] Cache invalidated after register');
+            } catch (\Exception $cacheEx) {
+                \Log::warning('[Hotspot] Cache invalidation failed', ['error' => $cacheEx->getMessage()]);
+            }
 
             // Log aktivitas
             LogActivityHelper::logHotspot(
