@@ -61,7 +61,7 @@
                         @csrf
 
                         {{-- Profile otomatis MahasiswaMagang --}}
-                        <input type="hidden" name="profile" value="@mahasiswa">
+                        <input type="hidden" name="profile" value="MahasiswaMagang">
 
                         <!-- Username -->
                         <div class="mb-5">
@@ -111,7 +111,7 @@
                     </div>
 
                     {{-- Daftar dengan Google --}}
-                    <a href="{{ route('hotspot.googleRegister', ['profile' => '@mahasiswa']) }}"
+                    <a href="{{ route('hotspot.googleRegister', ['profile' => 'MahasiswaMagang']) }}"
                        class="w-full py-3 bg-white border-2 border-gray-200 text-[#1a1a2e] font-semibold rounded-xl hover:bg-gray-50 hover:border-gray-300 hover:shadow-md transition-all duration-300 flex items-center justify-center gap-3">
                         <svg class="w-5 h-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>

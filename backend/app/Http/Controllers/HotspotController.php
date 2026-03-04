@@ -339,15 +339,16 @@ class HotspotController extends Controller
 
         // Map profile ke role untuk redirect
         $roleMap = [
-            '@dosen'          => 'dosen',
-            '@mahasiswa'      => 'mahasiswa',
-            '@staff'          => 'staff',
-            'default'         => 'tamu',
-            // Legacy names (backward compat)
             'DosenMagang'     => 'dosen',
             'MahasiswaMagang' => 'mahasiswa',
             'StaffMagang'     => 'staff',
             'TamuMagang'      => 'tamu',
+            'Default'         => 'tamu',
+            // Legacy / production names (backward compat)
+            '@dosen'          => 'dosen',
+            '@mahasiswa'      => 'mahasiswa',
+            '@staff'          => 'staff',
+            'default'         => 'tamu',
         ];
         $role = $roleMap[$profile] ?? 'tamu';
 

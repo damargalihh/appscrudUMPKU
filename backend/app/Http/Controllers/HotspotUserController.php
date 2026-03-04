@@ -239,11 +239,11 @@ class HotspotUserController extends Controller
             fputcsv($handle, ['username', 'email', 'password', 'profile']);
 
             // Contoh data
-            fputcsv($handle, ['anakmagang01', 'anakmagang01@example.com', 'pass1234', '@mahasiswa']);
-            fputcsv($handle, ['dosenmagang01', 'dosenmagang01@example.com', 'pass1234', '@dosen']);
-            fputcsv($handle, ['mahasiswamagang01', 'mahasiswamagang01@example.com', 'pass1234', '@mahasiswa']);
-            fputcsv($handle, ['staffmagang01', 'staffmagang01@example.com', 'pass1234', '@staff']);
-            fputcsv($handle, ['tamumagang01', 'tamumagang01@example.com', 'pass1234', 'IT']);
+            fputcsv($handle, ['anakmagang01', 'anakmagang01@example.com', 'pass1234', 'MahasiswaMagang']);
+            fputcsv($handle, ['dosenmagang01', 'dosenmagang01@example.com', 'pass1234', 'DosenMagang']);
+            fputcsv($handle, ['mahasiswamagang01', 'mahasiswamagang01@example.com', 'pass1234', 'MahasiswaMagang']);
+            fputcsv($handle, ['staffmagang01', 'staffmagang01@example.com', 'pass1234', 'StaffMagang']);
+            fputcsv($handle, ['tamumagang01', 'tamumagang01@example.com', 'pass1234', 'TamuMagang']);
 
             fclose($handle);
         }, $filename, [
