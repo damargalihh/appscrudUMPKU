@@ -61,7 +61,7 @@ class SelfRegisterController extends Controller
      */
     public function redirectToGoogle(Request $request)
     {
-        $profile = $request->query('profile', 'TamuMagang');
+        $profile = $request->query('profile', 'default');
 
         // Simpan ke session sebagai fallback
         session(['register_profile' => $profile]);

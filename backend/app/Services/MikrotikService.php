@@ -55,14 +55,24 @@ class MikrotikService
     }
 
     /**
-     * Cek response dari RouterOS API — jika ada !trap, lempar exception.
+     * Cek response dari RouterOS API — jika ada error, lempar exception.
+     * Mendeteksi format !trap DAN format after.message.
      */
     protected function checkResponse(array $response): array
     {
         foreach ($response as $item) {
+            // Format error standar: !trap
             if (isset($item['!trap'])) {
                 $message = $item['message'] ?? 'Unknown MikroTik error';
                 throw new \RuntimeException($message);
+            }
+            // Format error alternatif: after.message (sering muncul pada add command)
+            if (isset($item['after']) && isset($item['after']['message'])) {
+                throw new \RuntimeException($item['after']['message']);
+            }
+            // Format: ret (error message langsung di root)
+            if (isset($item['message']) && !isset($item['ret'])) {
+                throw new \RuntimeException($item['message']);
             }
         }
 

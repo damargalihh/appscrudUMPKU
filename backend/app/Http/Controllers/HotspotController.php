@@ -275,10 +275,15 @@ class HotspotController extends Controller
      */
     private function handleGoogleRegister(MikrotikService $mikrotik)
     {
-        $profile = session('register_profile', 'TamuMagang');
+        $profile = session('register_profile', 'default');
 
         // Map profile ke role untuk redirect
         $roleMap = [
+            '@dosen'          => 'dosen',
+            '@mahasiswa'      => 'mahasiswa',
+            '@staff'          => 'staff',
+            'default'         => 'tamu',
+            // Legacy names (backward compat)
             'DosenMagang'     => 'dosen',
             'MahasiswaMagang' => 'mahasiswa',
             'StaffMagang'     => 'staff',
